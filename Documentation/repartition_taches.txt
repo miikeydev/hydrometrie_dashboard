@@ -1,0 +1,28 @@
+Répartition des Tâches - Hydrométrie Dashboard
+
+1. Mahouna 
+   - Mise en place de la structure du projet (lib/, core/, presentation/, etc.)
+   - Configuration initiale (main.dart, app.dart, routes)
+   - Revue de code et intégration continue
+   - Proposition pour l'IA : construire le dataset et fournir des fonctions pour entraîner un modèle en équipe
+
+2. Mathieu 
+   - Développement des appels API dans hydrometrie_service.dart
+   - Création et ajustement des modèles de données
+   - Gestion de la récupération et du traitement des données
+
+3. Paul
+   - Développement de la page principale (dashboard_page.dart)
+   - Création des widgets (average_gauge.dart, graphiques)
+   - Intégration du design et animations
+
+4. Julie 
+   - Mise en place de widget basiques jauge avec Paul
+   - Liaison entre services et interface utilisateur
+   - Mise en place des filtres et de la navigation
+
+
+Tache pour tout le monde si vous avez le temps et une fois que j'aurais finis
+la pipeline D'IA: Entrainer vos modele sur le database commun et on choirira 
+celui avec les meilleurs metriques à la fin
+

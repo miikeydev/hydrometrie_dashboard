@@ -1,0 +1,79 @@
+# Organisation du Projet
+
+--------------------------------------------------
+LIB
+--------------------------------------------------
+Contient le code source principal de l'application.
+
+--------------------------------------------------
+CORE
+--------------------------------------------------
+Contient la logique métier et les modèles de données.
+
+• core/config  
+  - api_endpoints.dart → Définit les constantes et les URLs d'API (liste des endpoints).
+
+• core/models  
+  - average_model.dart → Modèle pour gérer les moyennes des mesures (et futur pour l'IA).
+
+• core/services  
+  - hydrometrie_service.dart → Service pour les appels API et la récupération des données.
+
+--------------------------------------------------
+PRESENTATION
+--------------------------------------------------
+Contient tout ce qui est lié à l'affichage et à l'interface utilisateur.
+
+• presentation/pages  
+  - dashboard_page.dart → Page principale contenant la jauge et les KPI.
+
+• presentation/state  
+  - Gestion de l’état global de l’application (Provider, Bloc, etc.).
+
+• presentation/widgets  
+  - average_gauge.dart → Widget affichant la jauge de moyenne.
+
+--------------------------------------------------
+APP & MAIN
+--------------------------------------------------
+• main.dart → Point d'entrée qui lance MyApp().  
+• app.dart → Configure MaterialApp, le thème et les routes.
+
+--------------------------------------------------
+RESSOURCES
+--------------------------------------------------
+Contient les fichiers statiques et visuels.
+
+• Fonts → Polices personnalisées.  
+• Icons → Icônes en SVG ou PNG.  
+• Images → Images utilisées dans l'application.  
+• Logos → Logos du projet.
+
+--------------------------------------------------
+DOCUMENTATION
+--------------------------------------------------
+Stocke les informations textuelles et l'architecture du projet.
+
+• organisation_projet.txt → Documentation de l’architecture.
+
+--------------------------------------------------
+AUTRES FICHIERS
+--------------------------------------------------
+• pubspec.yaml → Gère les dépendances du projet.  
+• README.md → Présentation générale du projet.
+
+--------------------------------------------------
+INTÉGRATION DE L'IA
+--------------------------------------------------
+Objectif :  
+Intégrer l'IA pour prédire les conditions des prochains jours/heures.
+ 
+A confirmer ...
+
+Endroits envisagés pour l'intégration de l'IA :  
+- Dans core/models : Création d’un modèle (ex. prediction_model.dart) pour stocker les résultats.
+- Dans core/services : Ajout d’un service (ex. ai_service.dart) pour le traitement des données via IA.
+- Dans presentation/widgets : Création d’un widget (ex. prediction_chart.dart) pour afficher les prévisions.
+- Dans presentation/pages : Possibilité d’ajouter une page dédiée aux analyses IA (ex. predictions_page.dart).
+
+(Remarque : Les détails de l'intégration de l'IA seront définis ultérieurement.)

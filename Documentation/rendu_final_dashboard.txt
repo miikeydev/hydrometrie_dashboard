@@ -1,0 +1,12 @@
+Rendu Final du Dashboard - Hydrometrie Dashboard
+
+- Navigation latérale gauche pour la gestion des filtres (station, région, période)
+- Colonne de gauche : affichage de jauges pour la moyenne des mesures
+- Zone de graphiques à droite : graphiques détaillés (évolution temporelle (debit / hauteur / précipitation))
+- Interface épurée, responsive et intuitive
+- Préparation pour intégrer l’IA (analyses, tendances, alertes)
+- Rendu fonctionnel, testé et documenté
+
+
+Bonus concernant les graphiques avec l'IA mettre dans une couleur differente 
+les prédiction et les valeurs réelles

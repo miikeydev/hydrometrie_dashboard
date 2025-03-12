@@ -1,0 +1,30 @@
+API Hub'Eau - API Hydrométrie (v2)
+Base URL: https://hubeau.eaufrance.fr/api/v2/hydrometrie/
+
+Endpoints:
+1. /obs_elab
+   GET : Lister les observations hydrométriques élaborées (débits moyens journaliers et mensuels).
+2. /obs_elab.csv
+   GET : Version CSV de l'endpoint /obs_elab.
+3. /observations_tr
+   GET : Lister les observations hydrométriques en temps réel (hauteur d'eau et débit).
+4. /observations_tr.csv
+   GET : Version CSV de /observations_tr.
+5. /observations_tr.xml
+   GET : Version XML de /observations_tr.
+6. /referentiel/sites
+   GET : Lister les sites hydrométriques (données géographiques et référentielles).
+7. /referentiel/sites.csv
+   GET : Version CSV de /referentiel/sites.
+8. /referentiel/sites.xml
+   GET : Version XML de /referentiel/sites.
+9. /referentiel/stations
+   GET : Lister les stations hydrométriques (points d'observation).
+10. /referentiel/stations.csv
+    GET : Version CSV de /referentiel/stations.
+11. /referentiel/stations.xml
+    GET : Version XML de /referentiel/stations.
+
+Note :
+- La version v2 de l'API est active depuis octobre 2024 (v1 reste accessible jusqu'en avril 2025).
+- Pour plus de détails, consulter la documentation officielle : https://hubeau.eaufrance.fr/page/api-hydrometrie
