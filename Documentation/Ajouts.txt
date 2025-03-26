@@ -1,0 +1,3 @@
+- Faire des prédictions simples pour faciliter la prise de décisions et donner des conseils.  
+- Penser en temps réel : par exemple, mettre une alerte quand une jauge dépasse ou risque de dépasser un certain seuil.  
+- L'objectif est d'anticiper et de prévenir les problèmes.  
