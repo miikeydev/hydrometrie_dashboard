@@ -58,6 +58,7 @@ class StatCardsScreen extends StatelessWidget {
             ),
           ],
         ),
+        ),
       ),
     );
   }
