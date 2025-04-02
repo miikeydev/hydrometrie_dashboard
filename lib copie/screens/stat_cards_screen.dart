@@ -1,50 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
-import 'package:hydrometrie_dashboard/presentation/widgets/average_gauge.dart';
 
 class StatCardsScreen extends StatelessWidget {
   const StatCardsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 20),
-          Column(
+    return Scaffold(
+      backgroundColor: const Color(0xFFF2F2F2),
+      body: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              HorizontalCircularStatCard(
-                value: '136',
-                unit: 'm³/s',
-                label: 'Moyenne du débit',
-                percent: 0.85,
+              const SizedBox(height: 20),
+              const Column(
+                children: [
+                  HorizontalCircularStatCard(
+                    value: '136',
+                    unit: 'm³/s',
+                    label: 'Moyenne du débit',
+                    percent: 0.85,
+                  ),
+                  SizedBox(height: 20),
+                  HorizontalCircularStatCard(
+                    value: '2.57',
+                    unit: 'm',
+                    label: 'Moyenne de hauteur',
+                    percent: 0.6,
+                  ),
+                ],
               ),
-
-          const SizedBox(height: 20),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              RectStatCard(title: 'Min débit', value: '78', unit: 'm/s'),
-              SizedBox(width: 16),
-              RectStatCard(title: 'Max débit', value: '165', unit: 'm/s'),
+              const SizedBox(height: 20),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  RectStatCard(title: 'Min débit', value: '78', unit: 'm/s'),
+                  SizedBox(width: 16),
+                  RectStatCard(title: 'Max débit', value: '165', unit: 'm/s'),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  RectStatCard(title: 'Min hauteur', value: '1,99', unit: 'm'),
+                  SizedBox(width: 16),
+                  RectStatCard(title: 'Max hauteur', value: '3,10', unit: 'm'),
+                ],
+              ),
+              const SizedBox(height: 20),
             ],
           ),
-          const SizedBox(height: 16),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              RectStatCard(title: 'Min hauteur', value: '1,99', unit: 'm'),
-              SizedBox(width: 16),
-              RectStatCard(title: 'Max hauteur', value: '3,10', unit: 'm'),
-            ],
-          ),
-          const SizedBox(height: 20),
-        ],
-            ),
-          ],
-        ),
         ),
       ),
     );
@@ -68,7 +75,7 @@ class HorizontalCircularStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 320,
+      width: 320, // légèrement réduit pour mieux tenir sur petit écran
       height: 180,
       margin: const EdgeInsets.all(8),
       padding: const EdgeInsets.all(16),
@@ -95,7 +102,7 @@ class HorizontalCircularStatCard extends StatelessWidget {
                 Text(unit, style: const TextStyle(fontSize: 12)),
               ],
             ),
-            progressColor: const Color.fromRGBO(33, 150, 243, 1),
+            progressColor: Colors.blue,
             backgroundColor: Colors.grey.shade300,
             circularStrokeCap: CircularStrokeCap.round,
           ),
