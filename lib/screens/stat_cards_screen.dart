@@ -21,15 +21,7 @@ class StatCardsScreen extends StatelessWidget {
                 label: 'Moyenne du débit',
                 percent: 0.85,
               ),
-              const SizedBox(height: 20),
-              HorizontalCircularStatCard(
-                value: '2.57',
-                unit: 'm',
-                label: 'Moyenne de hauteur',
-                percent: 0.6,
-              ),
-            ],
-          ),
+
           const SizedBox(height: 20),
           const Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -50,6 +42,10 @@ class StatCardsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
         ],
+            ),
+          ],
+        ),
+        ),
       ),
     );
   }
