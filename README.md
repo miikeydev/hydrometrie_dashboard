@@ -18,5 +18,5 @@ The project empowers water resource managers, environmental agencies, and the pu
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/hydrometrie_dashboard.git
+   git clone https://github.com/miikeydev/hydrometrie_dashboard.git
    ```
