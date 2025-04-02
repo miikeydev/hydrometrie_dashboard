@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:hydrometrie_dashboard/app.dart';
-import 'screens/stat_cards_screen.dart';
+import 'package:hydrometrie_dashboard/screens/dashboard_screen.dart';
+import 'package:hydrometrie_dashboard/screens/station_details_screen.dart';
 
 void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
+  runApp(
+    const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: StatCardsScreen(),
-    );
-  }
+      home: DashboardScreen(),
+    ),
+  );
 }
