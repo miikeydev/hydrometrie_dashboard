@@ -15,37 +15,34 @@ class StatCardsScreen extends StatelessWidget {
           const SizedBox(height: 20),
           Column(
             children: [
-              HorizontalCircularStatCard(
+              const HorizontalCircularStatCard(
                 value: '136',
                 unit: 'm³/s',
                 label: 'Moyenne du débit',
                 percent: 0.85,
               ),
-
-          const SizedBox(height: 20),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              RectStatCard(title: 'Min débit', value: '78', unit: 'm/s'),
-              SizedBox(width: 16),
-              RectStatCard(title: 'Max débit', value: '165', unit: 'm/s'),
+              const SizedBox(height: 20),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  RectStatCard(title: 'Min débit', value: '78', unit: 'm/s'),
+                  SizedBox(width: 16),
+                  RectStatCard(title: 'Max débit', value: '165', unit: 'm/s'),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  RectStatCard(title: 'Min hauteur', value: '1,99', unit: 'm'),
+                  SizedBox(width: 16),
+                  RectStatCard(title: 'Max hauteur', value: '3,10', unit: 'm'),
+                ],
+              ),
+              const SizedBox(height: 20),
             ],
           ),
-          const SizedBox(height: 16),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              RectStatCard(title: 'Min hauteur', value: '1,99', unit: 'm'),
-              SizedBox(width: 16),
-              RectStatCard(title: 'Max hauteur', value: '3,10', unit: 'm'),
-            ],
-          ),
-          const SizedBox(height: 20),
         ],
-            ),
-          ],
-        ),
-        ),
       ),
     );
   }

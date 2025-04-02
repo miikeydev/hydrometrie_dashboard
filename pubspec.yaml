@@ -1,4 +1,4 @@
-name: hydrometrie_dashboard_test
+name: hydrometrie_dashboard
 description: "A new Flutter project."
 publish_to: 'none'
 version: 0.1.0
@@ -12,6 +12,7 @@ dependencies:
     sdk: flutter
   flutter_date_pickers: ^0.4.3
   percent_indicator: ^4.2.4
+  dio: ^5.4.0
 
 dev_dependencies:
   flutter_test:
