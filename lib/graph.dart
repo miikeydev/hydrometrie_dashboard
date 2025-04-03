@@ -105,11 +105,24 @@ class HydroLineChart extends StatelessWidget {
                   LineChartBarData(
                     spots: spots,
                     isCurved: true,
-                    color: Colors.blue,
+                    // Couleur du trait
+                    gradient: LinearGradient(
+                      colors: [Colors.blue.withAlpha((0.9 * 255).toInt()), Colors.lightBlue],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
                     barWidth: 3,
                     belowBarData: BarAreaData(
                       show: true,
-                      color: Colors.blue.withOpacity(0.1),
+                      // Dégradé sous la ligne
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.blue.withAlpha((0.5 * 255).toInt()),
+                          Colors.blue.withAlpha((0.0 * 255).toInt()),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
                     ),
                     dotData: const FlDotData(show: false),
                   ),

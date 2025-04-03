@@ -1,23 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_date_pickers/flutter_date_pickers.dart' as dp;
 
+/// Barre de filtre contenant uniquement :
+///  - Un champ de recherche (avec auto-complétion).
+///  - Un sélecteur de dates (inline).
 ///
-/// A widget that displays:
-/// 1) A search box at the top (with autocomplete).
-/// 2) Station details (code, address, coordinates).
-/// 3) An inline date-range picker (directly on the interface).
-///
-/// All values are passed in as constructor parameters so they can
-/// be easily changed later. Styling is kept simple with white, black and blue colors.
-///
+/// Le but est de pouvoir, plus tard, gérer ces 2 états (le texte recherché et
+/// la plage de dates) via Riverpod et appeler l’API en conséquence.
 class StationInfoPanel extends StatefulWidget {
   final String initialSearchText;
   final List<String> stationSuggestions;
   final ValueChanged<String>? onSearchSelected;
-
-  final String stationCode;
-  final String stationAddress;
-  final String stationCoordinates;
 
   final DateTimeRange initialDateRange;
   final ValueChanged<DateTimeRange>? onDateRangeChanged;
@@ -27,9 +20,6 @@ class StationInfoPanel extends StatefulWidget {
     this.initialSearchText = '',
     this.stationSuggestions = const [],
     this.onSearchSelected,
-    required this.stationCode,
-    required this.stationAddress,
-    required this.stationCoordinates,
     required this.initialDateRange,
     this.onDateRangeChanged,
   }) : super(key: key);
@@ -40,15 +30,13 @@ class StationInfoPanel extends StatefulWidget {
 
 class _StationInfoPanelState extends State<StationInfoPanel> {
   final TextEditingController _searchController = TextEditingController();
-  List<String> _filteredSuggestions = [];
-
-  // GlobalKey to get the width of the search field container
   final GlobalKey _fieldKey = GlobalKey();
 
-  // We'll keep a DateTimeRange for outside use
-  late DateTimeRange _selectedDateRange;
+  // Liste filtrée pour l'autocomplete
+  List<String> _filteredSuggestions = [];
 
-  // Flutter Date Pickers uses dp.DatePeriod for "start" and "end"
+  // Gestion de la plage de dates sélectionnée
+  late DateTimeRange _selectedDateRange;
   late dp.DatePeriod _currentPeriod;
 
   @override
@@ -57,8 +45,8 @@ class _StationInfoPanelState extends State<StationInfoPanel> {
     _searchController.text = widget.initialSearchText;
     _filteredSuggestions = widget.stationSuggestions;
 
+    // Initialisation des dates
     _selectedDateRange = widget.initialDateRange;
-    // Convert the incoming DateTimeRange to dp.DatePeriod
     _currentPeriod = dp.DatePeriod(
       widget.initialDateRange.start,
       widget.initialDateRange.end,
@@ -74,13 +62,14 @@ class _StationInfoPanelState extends State<StationInfoPanel> {
   void _onSearchChanged(String query) {
     setState(() {
       _filteredSuggestions = widget.stationSuggestions
-          .where((station) => station.toLowerCase().contains(query.toLowerCase()))
+          .where(
+            (station) => station.toLowerCase().contains(query.toLowerCase()),
+          )
           .toList();
     });
   }
 
-  // When the user changes the period on the inline calendar,
-  // update our DateTimeRange and call the callback if any.
+  // Callback appelé lorsqu’on change la plage sur le calendrier
   void _onPeriodChanged(dp.DatePeriod newPeriod) {
     setState(() {
       _currentPeriod = newPeriod;
@@ -94,19 +83,18 @@ class _StationInfoPanelState extends State<StationInfoPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final dateRangeText =
-        '${_formatDate(_selectedDateRange.start)} — ${_formatDate(_selectedDateRange.end)}';
-
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(1),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /* ======= Search Box with Floating Dropdown ======= */
+          /// =======================
+          /// 1) Barre de recherche
+          /// =======================
           RawAutocomplete<String>(
             textEditingController: _searchController,
             focusNode: FocusNode(),
@@ -114,10 +102,10 @@ class _StationInfoPanelState extends State<StationInfoPanel> {
               if (textEditingValue.text.isEmpty) {
                 return const Iterable<String>.empty();
               }
-              return widget.stationSuggestions.where((String option) {
-                return option
-                    .toLowerCase()
-                    .contains(textEditingValue.text.toLowerCase());
+              return widget.stationSuggestions.where((option) {
+                return option.toLowerCase().contains(
+                      textEditingValue.text.toLowerCase(),
+                    );
               });
             },
             onSelected: (String selection) {
@@ -127,7 +115,6 @@ class _StationInfoPanelState extends State<StationInfoPanel> {
               }
             },
             fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
-              // Wrap the TextField in a Container with a GlobalKey to capture its width.
               return Container(
                 key: _fieldKey,
                 child: TextField(
@@ -135,7 +122,7 @@ class _StationInfoPanelState extends State<StationInfoPanel> {
                   focusNode: focusNode,
                   onEditingComplete: onEditingComplete,
                   decoration: InputDecoration(
-                    labelText: 'Search or code station',
+                    labelText: 'Rechercher une station',
                     prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -146,8 +133,8 @@ class _StationInfoPanelState extends State<StationInfoPanel> {
               );
             },
             optionsViewBuilder: (context, onSelected, options) {
-              // Retrieve the width of the search field
-              double fieldWidth = 200; // default fallback
+              // Récupère la largeur du champ pour ajuster celle du menu
+              double fieldWidth = 200; // fallback
               final RenderBox? renderBox =
                   _fieldKey.currentContext?.findRenderObject() as RenderBox?;
               if (renderBox != null) {
@@ -158,7 +145,7 @@ class _StationInfoPanelState extends State<StationInfoPanel> {
                 child: Material(
                   elevation: 4.0,
                   borderRadius: BorderRadius.circular(8),
-                  color: Colors.white, // white background from theme
+                  color: Colors.white,
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       maxWidth: fieldWidth,
@@ -186,41 +173,11 @@ class _StationInfoPanelState extends State<StationInfoPanel> {
             },
           ),
 
-          const SizedBox(height: 16),
-          /* ======= Station Info ======= */
-          Text(
-            'Code station',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Text(widget.stationCode, style: const TextStyle(fontWeight: FontWeight.w500)),
-          const SizedBox(height: 12),
+      
 
-          Text(
-            'Adresse',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Text(widget.stationAddress, style: const TextStyle(fontWeight: FontWeight.w500)),
-          const SizedBox(height: 12),
-
-          Text(
-            'Coordonnées',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Text(widget.stationCoordinates, style: const TextStyle(fontWeight: FontWeight.w500)),
-          const SizedBox(height: 12),
-
-          /* ======= Inline Date Range Picker ======= */
-          Text(
-            'Dates',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-
-          // Current range displayed as text
-          Text(dateRangeText, style: const TextStyle(color: Colors.black87)),
-          const SizedBox(height: 32),
-
-          // Inline Range Picker
+          /// ========================================
+          /// 2) Sélecteur de dates (calendrier inline)
+          /// ========================================
           Expanded(
             child: Center(
               child: Container(
@@ -229,7 +186,7 @@ class _StationInfoPanelState extends State<StationInfoPanel> {
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
                 ),
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(2),
                 child: dp.RangePicker(
                   selectedPeriod: _currentPeriod,
                   onChanged: _onPeriodChanged,
@@ -268,13 +225,5 @@ class _StationInfoPanelState extends State<StationInfoPanel> {
         ],
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.year}-${_pad(date.month)}-${_pad(date.day)}';
-  }
-
-  String _pad(int value) {
-    return value.toString().padLeft(2, '0');
   }
 }
