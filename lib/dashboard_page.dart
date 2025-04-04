@@ -115,7 +115,7 @@ class DashboardPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SizedBox(
-                    width: 220,
+                    width: 300, 
                     child: StationInfoPanel(
                       initialDateRange: DateTimeRange(
                         start: DateTime.now().subtract(const Duration(days: 5)),
@@ -166,14 +166,14 @@ class DashboardPage extends ConsumerWidget {
                                   children: [
                                     Expanded(
                                       child: statbox.StatBox(
-                                        label: 'Min débit',
+                                        label: 'Min Q',
                                         value: minDebit,
                                       ),
                                     ),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: statbox.StatBox(
-                                        label: 'Max débit',
+                                        label: 'Max Q',
                                         value: maxDebit,
                                       ),
                                     ),
@@ -186,14 +186,14 @@ class DashboardPage extends ConsumerWidget {
                                   children: [
                                     Expanded(
                                       child: statbox.StatBox(
-                                        label: 'Min hauteur',
+                                        label: 'Min H',
                                         value: minHauteur,
                                       ),
                                     ),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: statbox.StatBox(
-                                        label: 'Max hauteur',
+                                        label: 'Max H',
                                         value: maxHauteur,
                                       ),
                                     ),
