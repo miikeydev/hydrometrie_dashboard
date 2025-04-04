@@ -95,13 +95,17 @@ class HydroLineChart extends StatelessWidget {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      interval: _calculateInterval(values),
+                      interval: _calculateInterval(values), // Calcule un intervalle optimal
                       reservedSize: 45,
                       getTitlesWidget: (value, meta) {
-                        return Text(
-                          _formatValue(value),
-                          style: const TextStyle(fontSize: 10),
-                        );
+                        // Affiche uniquement un nombre limité de valeurs
+                        if (value % _calculateInterval(values) == 0) {
+                          return Text(
+                            _formatValue(value),
+                            style: const TextStyle(fontSize: 10),
+                          );
+                        }
+                        return const Text('');
                       },
                     ),
                   ),
@@ -216,13 +220,11 @@ class HydroLineChart extends StatelessWidget {
   // Formater les valeurs pour les afficher de façon plus lisible (K, M, etc.)
   String _formatValue(double value) {
     if (value >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)}M';
+      return '${(value / 1000000).toStringAsFixed((value % 1000000 == 0) ? 0 : 1)}M';
     } else if (value >= 1000) {
-      return '${(value / 1000).toStringAsFixed(1)}k';
-    } else if (value >= 100) {
-      return value.toStringAsFixed(0);
-    } else if (value >= 10) {
-      return value.toStringAsFixed(1);
+      return '${(value / 1000).toStringAsFixed((value % 1000 == 0) ? 0 : 1)}k';
+    } else if (value % 1 == 0) {
+      return value.toStringAsFixed(0); // Affiche uniquement la partie entière
     } else {
       return value.toStringAsFixed(2);
     }

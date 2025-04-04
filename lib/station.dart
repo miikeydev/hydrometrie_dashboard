@@ -8,11 +8,17 @@ import 'dart:async';
 class StationInfoPanel extends ConsumerStatefulWidget {
   final String initialSearchText;
   final DateTimeRange initialDateRange;
+  final DateTime firstDate;
+  final DateTime lastDate;
+  final DateTime maxSelectableDate; // Nouvelle propriété
   
   const StationInfoPanel({
     Key? key,
     this.initialSearchText = '',
     required this.initialDateRange,
+    required this.firstDate,
+    required this.lastDate,
+    required this.maxSelectableDate, // Initialisation
   }) : super(key: key);
 
   @override
@@ -86,11 +92,24 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
   }
   
   void _onPeriodChanged(dp.DatePeriod newPeriod) {
+    // Ajuste les dates pour éviter les dépassements et les incohérences
+    final adjustedStart = newPeriod.start.isAfter(widget.maxSelectableDate)
+        ? widget.maxSelectableDate
+        : newPeriod.start;
+    final adjustedEnd = newPeriod.end.isAfter(widget.maxSelectableDate)
+        ? widget.maxSelectableDate
+        : newPeriod.end;
+
+    // Empêche le début d'être après la fin
+    final validStart = adjustedStart.isAfter(adjustedEnd) ? adjustedEnd : adjustedStart;
+
     setState(() {
-      _currentPeriod = newPeriod;
+      _currentPeriod = dp.DatePeriod(validStart, adjustedEnd);
     });
-    final newRange = DateTimeRange(start: newPeriod.start, end: newPeriod.end);
-    ref.read(dateRangeProvider.notifier).state = newRange;
+    ref.read(dateRangeProvider.notifier).state = DateTimeRange(
+      start: validStart,
+      end: adjustedEnd,
+    );
   }
   
   void _resetSelectedStation() {
@@ -120,136 +139,126 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Barre de recherche avec autocomplete basé sur les résultats API
-          RawAutocomplete<Map<String, dynamic>>(
-            textEditingController: _searchController,
-            focusNode: _searchFocusNode,
-            optionsBuilder: (TextEditingValue textEditingValue) {
-              if (textEditingValue.text.isEmpty) {
-                return const Iterable<Map<String, dynamic>>.empty();
-              }
-              
-              // Utilisation directe du texte au lieu d'attendre le provider pour plus de réactivité
-              return stationSuggestionsAsync.when(
-                data: (stations) => stations.where((station) {
-                  final stationName = (station['libelle_station'] ?? '').toLowerCase();
-                  final searchText = textEditingValue.text.toLowerCase();
-                  // Recherche plus rapide avec contains au lieu d'attendre le provider
-                  return stationName.contains(searchText);
-                }),
-                loading: () => const [],
-                error: (_, __) => const [],
-              );
-            },
-            displayStringForOption: displayStringForOption,
-            onSelected: (Map<String, dynamic> selection) {
-              _searchController.text = displayStringForOption(selection);
-              developer.log('Station sélectionnée: ${selection['libelle_station']} (${selection['code_station']})', 
-                  name: 'station_selection');
-              developer.log('Détails de la station: $selection', name: 'station_selection');
-              ref.read(selectedStationProvider.notifier).state = selection;
-              
-              // Cacher le clavier après la sélection
-              FocusScope.of(context).unfocus();
-            },
-            fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
-              return Container(
-                key: _fieldKey,
-                child: TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  onEditingComplete: onEditingComplete,
-                  decoration: InputDecoration(
-                    labelText: 'Rechercher une station',
-                    hintText: 'Saisissez le nom d\'une station',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _showClearButton 
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: _clearSearch,
-                          )
-                        : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.blue, width: 2),
-                    ),
-                  ),
-                  onChanged: _onSearchChanged,
-                  textInputAction: TextInputAction.search,
-                ),
-              );
-            },
-            optionsViewBuilder: (context, onSelected, options) {
-              double fieldWidth = 200;
-              final RenderBox? renderBox = _fieldKey.currentContext?.findRenderObject() as RenderBox?;
-              if (renderBox != null) {
-                fieldWidth = renderBox.size.width;
-              }
-              return Align(
-                alignment: Alignment.topLeft,
-                child: Material(
-                  elevation: 4.0,
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.white,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: fieldWidth, maxHeight: 300),
-                    child: options.isEmpty
-                        ? Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Text(
-                              "Aucune station trouvée",
-                              style: TextStyle(color: Colors.grey[600]),
-                            ),
-                          )
-                        : ListView.separated(
-                            padding: EdgeInsets.zero,
-                            shrinkWrap: true,
-                            itemCount: options.length,
-                            separatorBuilder: (_, __) => const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              final option = options.elementAt(index);
-                              final libelle = option['libelle_station'] ?? '';
-                              final code = option['code_station'] ?? '';
-                              return ListTile(
-                                dense: true,
-                                title: Text(
-                                  "$libelle ($code)", 
-                                  style: const TextStyle(color: Colors.black),
-                                  overflow: TextOverflow.ellipsis,
+          Row(
+            children: [
+              // Barre de recherche
+              Expanded(
+                child: RawAutocomplete<Map<String, dynamic>>(
+                  textEditingController: _searchController,
+                  focusNode: _searchFocusNode,
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    if (textEditingValue.text.isEmpty) {
+                      return const Iterable<Map<String, dynamic>>.empty();
+                    }
+                    return stationSuggestionsAsync.when(
+                      data: (stations) => stations.where((station) {
+                        final stationName = (station['libelle_station'] ?? '').toLowerCase();
+                        final searchText = textEditingValue.text.toLowerCase();
+                        return stationName.contains(searchText);
+                      }),
+                      loading: () => const [],
+                      error: (_, __) => const [],
+                    );
+                  },
+                  displayStringForOption: displayStringForOption,
+                  onSelected: (Map<String, dynamic> selection) {
+                    _searchController.text = displayStringForOption(selection);
+                    ref.read(selectedStationProvider.notifier).state = selection;
+                    FocusScope.of(context).unfocus();
+                  },
+                  fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
+                    return TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      decoration: InputDecoration(
+                        labelText: 'Rechercher une station',
+                        hintText: 'Saisissez le nom d\'une station',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.blue, width: 2),
+                        ),
+                      ),
+                      onChanged: _onSearchChanged, // Déclenche une requête à chaque caractère
+                    );
+                  },
+                  optionsViewBuilder: (context, onSelected, options) {
+                    double fieldWidth = 200;
+                    final RenderBox? renderBox = _fieldKey.currentContext?.findRenderObject() as RenderBox?;
+                    if (renderBox != null) {
+                      fieldWidth = renderBox.size.width;
+                    }
+                    return Align(
+                      alignment: Alignment.topLeft,
+                      child: Material(
+                        elevation: 4.0,
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.white,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: fieldWidth, maxHeight: 300),
+                          child: options.isEmpty
+                              ? Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Text(
+                                    "Aucune station trouvée",
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
+                                )
+                              : ListView.separated(
+                                  padding: EdgeInsets.zero,
+                                  shrinkWrap: true,
+                                  itemCount: options.length,
+                                  separatorBuilder: (_, __) => const Divider(height: 1),
+                                  itemBuilder: (context, index) {
+                                    final option = options.elementAt(index);
+                                    final libelle = option['libelle_station'] ?? '';
+                                    final code = option['code_station'] ?? '';
+                                    return ListTile(
+                                      dense: true,
+                                      title: Text(
+                                        "$libelle ($code)", 
+                                        style: const TextStyle(color: Colors.black),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      onTap: () => onSelected(option),
+                                    );
+                                  },
                                 ),
-                                onTap: () => onSelected(option),
-                              );
-                            },
-                          ),
-                  ),
-                ),
-              );
-            },
-          ),
-          
-          // Bouton de réinitialisation si une station est sélectionnée
-          if (selectedStation != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: TextButton.icon(
-                onPressed: _resetSelectedStation,
-                icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('Réinitialiser la sélection'),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
-            ),
-            
+
+              const SizedBox(width: 8),
+
+              // Bouton "Réinitialiser la sélection" stylé
+              if (selectedStation != null)
+                ElevatedButton(
+                  onPressed: _resetSelectedStation,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue, // Fond bleu
+                    shape: const CircleBorder(), // Bouton circulaire
+                    padding: const EdgeInsets.all(12), // Taille du bouton
+                  ),
+                  child: const Icon(
+                    Icons.refresh, // Icône de flèche
+                    color: Colors.white, // Flèche blanche
+                    size: 20,
+                  ),
+                ),
+            ],
+          ),
+          
+          // Espacement entre la barre de recherche et le calendrier
           const SizedBox(height: 16),
           
           // Titre du sélecteur de date
@@ -265,48 +274,44 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
           const SizedBox(height: 8),
             
           // Sélecteur de dates (calendrier inline)
-          Expanded(
-            child: Center(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
-                ),
-                padding: const EdgeInsets.all(2),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: dp.RangePicker(
-                    selectedPeriod: _currentPeriod,
-                    onChanged: _onPeriodChanged,
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2100),
-                    datePickerStyles: dp.DatePickerRangeStyles(
-                      defaultDateTextStyle: const TextStyle(color: Colors.black),
-                      selectedPeriodStartTextStyle: const TextStyle(color: Colors.white),
-                      selectedPeriodMiddleTextStyle: const TextStyle(color: Colors.white),
-                      selectedPeriodStartDecoration: BoxDecoration(
-                        color: Colors.blue,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(16),
-                          bottomLeft: Radius.circular(16),
-                        ),
-                      ),
-                      selectedPeriodMiddleDecoration: BoxDecoration(
-                        color: Colors.blue,
-                      ),
-                      selectedPeriodLastDecoration: BoxDecoration(
-                        color: Colors.blue,
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(16),
-                          bottomRight: Radius.circular(16),
-                        ),
-                      ),
-                      selectedSingleDateDecoration: BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.circle,
-                      ),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
+            ),
+            padding: const EdgeInsets.all(2),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: dp.RangePicker(
+                selectedPeriod: _currentPeriod,
+                onChanged: _onPeriodChanged,
+                firstDate: widget.firstDate,
+                lastDate: widget.lastDate,
+                datePickerStyles: dp.DatePickerRangeStyles(
+                  defaultDateTextStyle: const TextStyle(color: Colors.black),
+                  selectedPeriodStartTextStyle: const TextStyle(color: Colors.white),
+                  selectedPeriodMiddleTextStyle: const TextStyle(color: Colors.white),
+                  selectedPeriodStartDecoration: BoxDecoration(
+                    color: Colors.blue,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      bottomLeft: Radius.circular(16),
                     ),
+                  ),
+                  selectedPeriodMiddleDecoration: BoxDecoration(
+                    color: Colors.blue,
+                  ),
+                  selectedPeriodLastDecoration: BoxDecoration(
+                    color: Colors.blue,
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                  ),
+                  selectedSingleDateDecoration: BoxDecoration(
+                    color: Colors.blue,
+                    shape: BoxShape.circle,
                   ),
                 ),
               ),

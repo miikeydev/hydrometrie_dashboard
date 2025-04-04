@@ -24,10 +24,10 @@ class DashboardPage extends ConsumerWidget {
 
     double debitMoyen = 0.0;
     double hauteurMoyenne = 0.0;
-    String minDebit = "N/A";
-    String maxDebit = "N/A";
-    String minHauteur = "N/A";
-    String maxHauteur = "N/A";
+    String minDebit = "-";
+    String maxDebit = "-";
+    String minHauteur = "-";
+    String maxHauteur = "-";
 
     String dashboardTitle = "Hydrométrie Dashboard";
     if (selectedStation != null) {
@@ -121,6 +121,9 @@ class DashboardPage extends ConsumerWidget {
                         start: DateTime.now().subtract(const Duration(days: 5)),
                         end: DateTime.now(),
                       ),
+                      firstDate: DateTime.now().subtract(const Duration(days: 30)), // Limite un mois en arrière
+                      lastDate: DateTime.now().add(const Duration(days: 30)), // Limite un mois en avant
+                      maxSelectableDate: DateTime.now(), // Empêche la sélection au-delà de la date actuelle
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -250,15 +253,13 @@ class DashboardPage extends ConsumerWidget {
   String formatValue(double value, String unit) {
     String formattedValue;
     if (value.isNaN || value.isInfinite) {
-      return "N/A";
+      return "-";
     } else if (value >= 1000000) {
-      formattedValue = '${(value / 1000000).toStringAsFixed(1)}M';
+      formattedValue = '${(value / 1000000).toStringAsFixed((value % 1000000 == 0) ? 0 : 1)}M';
     } else if (value >= 1000) {
-      formattedValue = '${(value / 1000).toStringAsFixed(1)}k';
-    } else if (value >= 100) {
-      formattedValue = value.toStringAsFixed(0);
-    } else if (value >= 10) {
-      formattedValue = value.toStringAsFixed(1);
+      formattedValue = '${(value / 1000).toStringAsFixed((value % 1000 == 0) ? 0 : 1)}k';
+    } else if (value % 1 == 0) {
+      formattedValue = value.toStringAsFixed(0); // Affiche uniquement la partie entière
     } else {
       formattedValue = value.toStringAsFixed(2);
     }
