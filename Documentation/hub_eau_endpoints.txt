@@ -21,7 +21,7 @@ Endpoints:
 9. /referentiel/stations
    GET : Lister les stations hydrométriques (points d'observation).
 10. /referentiel/stations.csv
-    GET : Version CSV de /referentiel/stations.
+    GET : Version CSV de /referentiel/stations. Il faut utiliser cet API pour que l'on me propose toutes les statiosn qui ont pour code commune station apris 
 11. /referentiel/stations.xml
     GET : Version XML de /referentiel/stations.
 

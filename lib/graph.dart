@@ -37,10 +37,11 @@ class HydroLineChart extends StatelessWidget {
     }
 
     // If user hasn't provided min/max, derive them from the data
-    final derivedMinX = minX ?? xValues.reduce((a, b) => a < b ? a : b);
-    final derivedMaxX = maxX ?? xValues.reduce((a, b) => a > b ? a : b);
-    final derivedMinY = minY ?? yValues.reduce((a, b) => a < b ? a : b);
-    final derivedMaxY = maxY ?? yValues.reduce((a, b) => a > b ? a : b);
+    final derivedMinX = xValues.isNotEmpty ? (minX ?? xValues.reduce((a, b) => a < b ? a : b)) : 0.0;
+    final derivedMaxX = xValues.isNotEmpty ? (maxX ?? xValues.reduce((a, b) => a > b ? a : b)) : 1.0;
+    final derivedMinY = yValues.isNotEmpty ? (minY ?? yValues.reduce((a, b) => a < b ? a : b)) : 0.0;
+    final derivedMaxY = yValues.isNotEmpty ? (maxY ?? yValues.reduce((a, b) => a > b ? a : b)) : 1.0;
+
 
     return Container(
       padding: const EdgeInsets.all(16),

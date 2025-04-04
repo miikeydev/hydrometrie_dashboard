@@ -13,6 +13,7 @@ dependencies:
   flutter_date_pickers: ^0.4.3
   percent_indicator: ^4.2.4
   dio: ^5.4.0
+  flutter_riverpod: ^2.3.4
 
 dev_dependencies:
   flutter_test:

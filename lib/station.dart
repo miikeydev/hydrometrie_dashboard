@@ -1,118 +1,97 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_date_pickers/flutter_date_pickers.dart' as dp;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers.dart';
 
-/// Barre de filtre contenant uniquement :
-///  - Un champ de recherche (avec auto-complétion).
-///  - Un sélecteur de dates (inline).
-///
-/// Le but est de pouvoir, plus tard, gérer ces 2 états (le texte recherché et
-/// la plage de dates) via Riverpod et appeler l’API en conséquence.
-class StationInfoPanel extends StatefulWidget {
+class StationInfoPanel extends ConsumerStatefulWidget {
   final String initialSearchText;
-  final List<String> stationSuggestions;
-  final ValueChanged<String>? onSearchSelected;
-
   final DateTimeRange initialDateRange;
-  final ValueChanged<DateTimeRange>? onDateRangeChanged;
-
+  
   const StationInfoPanel({
     Key? key,
     this.initialSearchText = '',
-    this.stationSuggestions = const [],
-    this.onSearchSelected,
     required this.initialDateRange,
-    this.onDateRangeChanged,
   }) : super(key: key);
 
   @override
-  State<StationInfoPanel> createState() => _StationInfoPanelState();
+  ConsumerState<StationInfoPanel> createState() => _StationInfoPanelState();
 }
 
-class _StationInfoPanelState extends State<StationInfoPanel> {
+class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
   final TextEditingController _searchController = TextEditingController();
   final GlobalKey _fieldKey = GlobalKey();
-
-  // Liste filtrée pour l'autocomplete
-  List<String> _filteredSuggestions = [];
-
-  // Gestion de la plage de dates sélectionnée
-  late DateTimeRange _selectedDateRange;
   late dp.DatePeriod _currentPeriod;
-
+  
   @override
-  void initState() {
-    super.initState();
-    _searchController.text = widget.initialSearchText;
-    _filteredSuggestions = widget.stationSuggestions;
+void initState() {
+  super.initState();
+  _searchController.text = widget.initialSearchText;
+  _currentPeriod = dp.DatePeriod(
+    widget.initialDateRange.start,
+    widget.initialDateRange.end,
+  );
+  // Retarder la modification du provider après le build initial.
+  Future.microtask(() {
+    ref.read(dateRangeProvider.notifier).state = widget.initialDateRange;
+    ref.read(searchTextProvider.notifier).state = widget.initialSearchText;
+  });
+}
 
-    // Initialisation des dates
-    _selectedDateRange = widget.initialDateRange;
-    _currentPeriod = dp.DatePeriod(
-      widget.initialDateRange.start,
-      widget.initialDateRange.end,
-    );
-  }
-
+  
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
-
+  
   void _onSearchChanged(String query) {
-    setState(() {
-      _filteredSuggestions = widget.stationSuggestions
-          .where(
-            (station) => station.toLowerCase().contains(query.toLowerCase()),
-          )
-          .toList();
-    });
+    ref.read(searchTextProvider.notifier).state = query;
   }
-
-  // Callback appelé lorsqu’on change la plage sur le calendrier
+  
   void _onPeriodChanged(dp.DatePeriod newPeriod) {
     setState(() {
       _currentPeriod = newPeriod;
-      _selectedDateRange = DateTimeRange(start: newPeriod.start, end: newPeriod.end);
     });
-
-    if (widget.onDateRangeChanged != null) {
-      widget.onDateRangeChanged!(_selectedDateRange);
-    }
+    final newRange = DateTimeRange(start: newPeriod.start, end: newPeriod.end);
+    ref.read(dateRangeProvider.notifier).state = newRange;
   }
-
+  
   @override
   Widget build(BuildContext context) {
+    // Récupère les suggestions de stations depuis le provider
+    final stationSuggestionsAsync = ref.watch(stationSuggestionsProvider);
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(1),
+        borderRadius: BorderRadius.circular(8),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// =======================
-          /// 1) Barre de recherche
-          /// =======================
-          RawAutocomplete<String>(
+          // Barre de recherche avec autocomplete basé sur les résultats API
+          RawAutocomplete<Map<String, dynamic>>(
             textEditingController: _searchController,
             focusNode: FocusNode(),
             optionsBuilder: (TextEditingValue textEditingValue) {
               if (textEditingValue.text.isEmpty) {
-                return const Iterable<String>.empty();
+                return const Iterable<Map<String, dynamic>>.empty();
               }
-              return widget.stationSuggestions.where((option) {
-                return option.toLowerCase().contains(
-                      textEditingValue.text.toLowerCase(),
-                    );
-              });
+              return stationSuggestionsAsync.when(
+                data: (stations) => stations,
+                loading: () => const [],
+                error: (_, __) => const [],
+              );
             },
-            onSelected: (String selection) {
-              _searchController.text = selection;
-              if (widget.onSearchSelected != null) {
-                widget.onSearchSelected!(selection);
-              }
+            displayStringForOption: (option) {
+              final libelle = option['libelle_station'] ?? '';
+              final code = option['code_station'] ?? '';
+              return "$libelle ($code)";
+            },
+            onSelected: (Map<String, dynamic> selection) {
+              _searchController.text = displayStringForOption(selection);
+              ref.read(selectedStationProvider.notifier).state = selection;
             },
             fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
               return Container(
@@ -133,10 +112,8 @@ class _StationInfoPanelState extends State<StationInfoPanel> {
               );
             },
             optionsViewBuilder: (context, onSelected, options) {
-              // Récupère la largeur du champ pour ajuster celle du menu
-              double fieldWidth = 200; // fallback
-              final RenderBox? renderBox =
-                  _fieldKey.currentContext?.findRenderObject() as RenderBox?;
+              double fieldWidth = 200;
+              final RenderBox? renderBox = _fieldKey.currentContext?.findRenderObject() as RenderBox?;
               if (renderBox != null) {
                 fieldWidth = renderBox.size.width;
               }
@@ -147,23 +124,19 @@ class _StationInfoPanelState extends State<StationInfoPanel> {
                   borderRadius: BorderRadius.circular(8),
                   color: Colors.white,
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: fieldWidth,
-                    ),
+                    constraints: BoxConstraints(maxWidth: fieldWidth),
                     child: ListView.separated(
                       padding: EdgeInsets.zero,
                       shrinkWrap: true,
                       itemCount: options.length,
                       separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (BuildContext context, int index) {
+                      itemBuilder: (context, index) {
                         final option = options.elementAt(index);
+                        final libelle = option['libelle_station'] ?? '';
+                        final code = option['code_station'] ?? '';
                         return ListTile(
-                          title: Text(
-                            option,
-                            style: const TextStyle(color: Colors.black),
-                          ),
+                          title: Text("$libelle ($code)", style: const TextStyle(color: Colors.black)),
                           onTap: () => onSelected(option),
-                          hoverColor: Colors.blue.withOpacity(0.2),
                         );
                       },
                     ),
@@ -172,12 +145,8 @@ class _StationInfoPanelState extends State<StationInfoPanel> {
               );
             },
           ),
-
-      
-
-          /// ========================================
-          /// 2) Sélecteur de dates (calendrier inline)
-          /// ========================================
+          const SizedBox(height: 16),
+          // Sélecteur de dates (calendrier inline)
           Expanded(
             child: Center(
               child: Container(
@@ -225,5 +194,11 @@ class _StationInfoPanelState extends State<StationInfoPanel> {
         ],
       ),
     );
+  }
+  
+  String displayStringForOption(Map<String, dynamic> option) {
+    final libelle = option['libelle_station'] ?? '';
+    final code = option['code_station'] ?? '';
+    return "$libelle ($code)";
   }
 }
