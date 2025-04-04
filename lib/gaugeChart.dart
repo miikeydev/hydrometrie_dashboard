@@ -48,7 +48,7 @@ class CircleGaugeCard extends StatelessWidget {
     final String formattedValue = _formatValue(value);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12), // Réduction du padding
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -67,18 +67,18 @@ class CircleGaugeCard extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12, // Texte plus petit
               fontWeight: FontWeight.w500,
               color: Colors.grey[800],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8), // Espacement réduit
           // Circular gauge
           Expanded(
             child: Center(
               child: CircularPercentIndicator(
-                radius: 70,
-                lineWidth: 13.0,
+                radius: 50, // Rayon réduit
+                lineWidth: 10.0, // Épaisseur de ligne réduite
                 percent: percent,
                 center: Stack(
                   alignment: Alignment.center,
@@ -88,17 +88,17 @@ class CircleGaugeCard extends StatelessWidget {
                       formattedValue,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 24,
+                        fontSize: 18, // Taille de police réduite
                       ),
                     ),
 
                     // Unit displayed below
                     Positioned(
-                      bottom: 40,
+                      bottom: 32, // Position ajustée
                       child: Text(
                         unit,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 10, // Taille réduite
                           color: Colors.grey[600],
                         ),
                       ),
@@ -109,7 +109,7 @@ class CircleGaugeCard extends StatelessWidget {
                 backgroundColor: Colors.grey[200]!,
                 circularStrokeCap: CircularStrokeCap.round,
                 animation: true,
-                animationDuration: 1000,
+                animationDuration: 800, // Animation plus rapide
               ),
             ),
           ),
