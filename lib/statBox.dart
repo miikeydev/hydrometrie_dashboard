@@ -1,12 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// A simple stat box showing:
-/// - A label (e.g., "Min débit")
-/// - A numeric/string value (e.g., "78 m/s")
-///
-/// Both values are passed in via constructor so they can
-/// be updated or replaced easily. The box includes a
-/// rounded corner background with a slight shadow.
 class StatBox extends StatelessWidget {
   final String label;
   final String value;
@@ -19,29 +12,72 @@ class StatBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Séparation de la valeur et de l'unité pour un meilleur affichage
+    final parts = value.split(' ');
+    final numericValue = parts.isNotEmpty ? parts.first : "N/A";
+    final unit = parts.length > 1 ? parts.last : "";
+    
     return Container(
-      width: 120, // or adjust as needed
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
           BoxShadow(
-            color: Colors.black12,
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 4,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Label (titre du StatBox)
           Text(
             label,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            value,
+          const SizedBox(height: 8),
+          
+          // Zone de valeur avec l'unité en bas à droite
+          Expanded(
+            child: Stack(
+              children: [
+                // Valeur principale (centrée)
+                Align(
+                  alignment: Alignment.center,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      numericValue,
+                      style: const TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // Unité (en bas à droite)
+                if (unit.isNotEmpty)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Text(
+                      unit,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),

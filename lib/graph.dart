@@ -1,133 +1,185 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 
-/// A simple reusable line chart widget (using the fl_chart package).
-///
-/// [title] - The chart title (e.g., 'Hauteur (H)').
-/// [xValues] and [yValues] - Parallel lists representing X and Y coordinates.
-///   They must have the same length.
-/// The chart automatically infers [minY], [maxY] (and [minX], [maxX]) from the data,
-///   but you can override them if desired.
 class HydroLineChart extends StatelessWidget {
   final String title;
-  final List<double> xValues; // e.g. [0, 1, 2, 3] or time in hours
-  final List<double> yValues; // e.g. [10, 25, 40, 93]
-  final double? minY;
-  final double? maxY;
-  final double? minX;
-  final double? maxX;
+  final List<DateTime> dates;
+  final List<double> values;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final bool isHeightChart; // Pour distinguer les graphiques de hauteur et de débit
 
   const HydroLineChart({
     Key? key,
     required this.title,
-    required this.xValues,
-    required this.yValues,
-    this.minY,
-    this.maxY,
-    this.minX,
-    this.maxX,
+    required this.dates,
+    required this.values,
+    this.startDate,
+    this.endDate,
+    this.isHeightChart = false, // Par défaut c'est un graphique de débit
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // Convert incoming xValues,yValues -> list of FlSpot
-    final spots = <FlSpot>[];
-    for (int i = 0; i < xValues.length; i++) {
-      spots.add(FlSpot(xValues[i], yValues[i]));
-    }
+    // Pour éviter les erreurs quand il n'y a pas de données
+    final bool hasData = dates.isNotEmpty && values.isNotEmpty && dates.length == values.length;
 
-    // If user hasn't provided min/max, derive them from the data
-    final derivedMinX = xValues.isNotEmpty ? (minX ?? xValues.reduce((a, b) => a < b ? a : b)) : 0.0;
-    final derivedMaxX = xValues.isNotEmpty ? (maxX ?? xValues.reduce((a, b) => a > b ? a : b)) : 1.0;
-    final derivedMinY = yValues.isNotEmpty ? (minY ?? yValues.reduce((a, b) => a < b ? a : b)) : 0.0;
-    final derivedMaxY = yValues.isNotEmpty ? (maxY ?? yValues.reduce((a, b) => a > b ? a : b)) : 1.0;
-
+    // Créer un format pour l'affichage des dates
+    final dateFormat = DateFormat('dd/MM HH:mm');
+    
+    // Couleurs différentes selon le type de graphique
+    final Color mainColor = isHeightChart 
+        ? Color(0xFF64B5F6) // Bleu plus clair pour hauteur
+        : Color(0xFF1976D2); // Bleu plus foncé pour débit
+    
+    final Color gradientColor = isHeightChart
+        ? Color(0xFFBBDEFB).withOpacity(0.5) // Très clair pour hauteur
+        : Color(0xFF2196F3).withOpacity(0.5); // Moyennement clair pour débit
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Expanded(
-            child: LineChart(
+            child: hasData ? LineChart(
               LineChartData(
-                minX: derivedMinX,
-                maxX: derivedMaxX,
-                minY: derivedMinY,
-                maxY: derivedMaxY,
                 gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: true,
-                  getDrawingHorizontalLine: (value) =>
-                      FlLine(color: Colors.grey[200]!, strokeWidth: 1),
-                  getDrawingVerticalLine: (value) =>
-                      FlLine(color: Colors.grey[200]!, strokeWidth: 1),
+                  show: false, // Suppression de la grille
                 ),
                 titlesData: FlTitlesData(
                   show: true,
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      interval: (derivedMaxX - derivedMinX) / 4,
+                      reservedSize: 30,
                       getTitlesWidget: (value, meta) {
-                        // Example: convert 'value' to an hour label or just show the numeric
-                        return Text(
-                          _formatX(value),
-                          style: const TextStyle(fontSize: 12),
-                        );
+                        // Affiche seulement quelques dates clés pour éviter la surcharge
+                        if (hasData && value.toInt() >= 0 && value.toInt() < dates.length) {
+                          // Affiche uniquement certaines dates pour éviter la surcharge
+                          if (dates.length <= 5 || value.toInt() % (dates.length ~/ 5) == 0) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 10.0),
+                              child: Text(
+                                dateFormat.format(dates[value.toInt()]),
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                            );
+                          }
+                        }
+                        return const Text('');
                       },
                     ),
                   ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      interval: (derivedMaxY - derivedMinY) / 4,
-                      getTitlesWidget: (value, meta) => Text(
-                        value.toStringAsFixed(0),
-                        style: const TextStyle(fontSize: 12),
-                      ),
+                      interval: _calculateInterval(values),
+                      reservedSize: 45,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          _formatValue(value),
+                          style: const TextStyle(fontSize: 10),
+                        );
+                      },
                     ),
                   ),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                 ),
-                lineTouchData: LineTouchData(enabled: true),
-                borderData: FlBorderData(show: false),
+                borderData: FlBorderData(
+                  show: true,
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                minX: 0,
+                maxX: hasData ? (dates.length - 1).toDouble() : 10,
+                minY: hasData ? _getMinY(values) : 0,
+                maxY: hasData ? _getMaxY(values) : 10,
                 lineBarsData: [
                   LineChartBarData(
-                    spots: spots,
+                    spots: hasData
+                        ? List.generate(dates.length, (index) {
+                            return FlSpot(index.toDouble(), values[index]);
+                          })
+                        : [const FlSpot(0, 0), const FlSpot(1, 1)],
                     isCurved: true,
-                    // Couleur du trait
-                    gradient: LinearGradient(
-                      colors: [Colors.blue.withAlpha((0.9 * 255).toInt()), Colors.lightBlue],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
+                    color: mainColor,
                     barWidth: 3,
+                    isStrokeCapRound: true,
+                    dotData: const FlDotData(
+                      show: false,
+                    ),
                     belowBarData: BarAreaData(
                       show: true,
-                      // Dégradé sous la ligne
+                      // Un dégradé du bleu vers transparent
                       gradient: LinearGradient(
                         colors: [
-                          Colors.blue.withAlpha((0.5 * 255).toInt()),
-                          Colors.blue.withAlpha((0.0 * 255).toInt()),
+                          gradientColor,
+                          gradientColor.withOpacity(0.1),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       ),
                     ),
-                    dotData: const FlDotData(show: false),
                   ),
                 ],
+                lineTouchData: LineTouchData(
+                  enabled: true,
+                  touchTooltipData: LineTouchTooltipData(
+                    fitInsideHorizontally: true,
+                    fitInsideVertically: true,
+                    getTooltipColor: (_) => mainColor.withOpacity(0.8),
+                    getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        final int index = spot.x.toInt();
+                        if (hasData && index >= 0 && index < dates.length) {
+                          final DateTime date = dates[index];
+                          final double value = values[index];
+                          return LineTooltipItem(
+                            '${dateFormat.format(date)}\n${_formatValueWithUnit(value, isHeightChart)}',
+                            TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        } else {
+                          return const LineTooltipItem('', TextStyle());
+                        }
+                      }).toList();
+                    },
+                  ),
+                  handleBuiltInTouches: true,
+                ),
+              ),
+            ) : Center(
+              child: Text(
+                'Aucune donnée disponible',
+                style: TextStyle(color: Colors.grey[700]),
               ),
             ),
           ),
@@ -136,13 +188,50 @@ class HydroLineChart extends StatelessWidget {
     );
   }
 
-  // Example method for formatting X values (like hours). Customize as needed.
-  String _formatX(double x) {
-    // For example, treat x as "hours" in the day:
-    final int hour = x.round();
-    final minutes = ((x - hour) * 60).round();
-    final hh = hour.toString().padLeft(2, '0');
-    final mm = minutes.toString().padLeft(2, '0');
-    return '$hh:$mm';
+  double _getMinY(List<double> values) {
+    if (values.isEmpty) return 0;
+    // Trouver le minimum des valeurs et soustraire un peu pour l'esthétique
+    double min = values.reduce((a, b) => a < b ? a : b);
+    return min > 0 ? min * 0.9 : min * 1.1;
+  }
+
+  double _getMaxY(List<double> values) {
+    if (values.isEmpty) return 10;
+    // Trouver le maximum des valeurs et ajouter un peu pour l'esthétique
+    double max = values.reduce((a, b) => a > b ? a : b);
+    return max * 1.1;
+  }
+  
+  double _calculateInterval(List<double> values) {
+    if (values.isEmpty) return 1.0;
+    double min = values.reduce((a, b) => a < b ? a : b);
+    double max = values.reduce((a, b) => a > b ? a : b);
+    double range = max - min;
+    
+    // Choisir un intervalle qui crée environ 5 divisions
+    if (range <= 0) return 1.0;
+    return range / 5;
+  }
+  
+  // Formater les valeurs pour les afficher de façon plus lisible (K, M, etc.)
+  String _formatValue(double value) {
+    if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}M';
+    } else if (value >= 1000) {
+      return '${(value / 1000).toStringAsFixed(1)}k';
+    } else if (value >= 100) {
+      return value.toStringAsFixed(0);
+    } else if (value >= 10) {
+      return value.toStringAsFixed(1);
+    } else {
+      return value.toStringAsFixed(2);
+    }
+  }
+  
+  // Formater les valeurs avec l'unité appropriée
+  String _formatValueWithUnit(double value, bool isHeight) {
+    String formattedValue = _formatValue(value);
+    String unit = isHeight ? 'm' : 'm³/s';
+    return '$formattedValue $unit';
   }
 }
