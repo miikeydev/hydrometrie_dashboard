@@ -6,14 +6,15 @@ import 'gaugeChart.dart' as gauge;
 import 'statBox.dart' as statbox;
 import 'graph.dart' as graph;
 import 'dart:developer' as developer;
-import 'package:intl/intl.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final observationsAsync = ref.watch(observationsProvider);
+    final observationsAsync = ref.watch(combinedObservationsProvider);
+
+
     final selectedStation = ref.watch(selectedStationProvider);
     final dateRange = ref.watch(dateRangeProvider);
 
@@ -82,10 +83,6 @@ class DashboardPage extends ConsumerWidget {
     }
 
     String periodLabel = "";
-    if (dateRange != null) {
-      final dateFormat = DateFormat('dd/MM/yyyy');
-      periodLabel = " (${dateFormat.format(dateRange.start)} - ${dateFormat.format(dateRange.end)})";
-    }
 
     return Scaffold(
       body: Container(

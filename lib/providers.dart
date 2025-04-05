@@ -1,13 +1,17 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'dart:developer' as developer;
 import 'package:intl/intl.dart';
+import 'package:flutter/material.dart';
 
-// Provider pour le texte de recherche (ex : nom de la station ou de la commune)
+// ---------------------------------------------------------------------
+// 1) Providers existants (recherche, station sélectionnée, dateRange, etc.)
+// ---------------------------------------------------------------------
+
+// Texte de recherche pour le nom de station
 final searchTextProvider = StateProvider<String>((ref) => "");
 
-// Provider pour la plage de dates
+// Plage de dates sélectionnée
 final dateRangeProvider = StateProvider<DateTimeRange>((ref) {
   return DateTimeRange(
     start: DateTime.now().subtract(const Duration(days: 5)),
@@ -15,10 +19,10 @@ final dateRangeProvider = StateProvider<DateTimeRange>((ref) {
   );
 });
 
-// Provider pour stocker la station sélectionnée (on stocke ici toute la Map renvoyée par l'API)
+// Station sélectionnée (on stocke tout l'objet JSON)
 final selectedStationProvider = StateProvider<Map<String, dynamic>?>((ref) => null);
 
-// Provider pour récupérer les suggestions de stations en fonction du texte de recherche
+// Suggestions de stations (référentiel)
 final stationSuggestionsProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final searchText = ref.watch(searchTextProvider);
@@ -26,42 +30,45 @@ final stationSuggestionsProvider =
     return [];
   }
   final dio = Dio();
-  // Vous pouvez ajuster le paramètre de requête selon l'API (ici on recherche par libellé de station)
   final response = await dio.get(
     'https://hubeau.eaufrance.fr/api/v2/hydrometrie/referentiel/stations',
     queryParameters: {
       'libelle_station': searchText,
-      'size': 20, // Limite à 20 résultats
+      'size': 20,
     },
   );
   final data = response.data['data'] as List<dynamic>;
   return data.map((e) => e as Map<String, dynamic>).toList();
 });
 
-// Provider pour récupérer les observations (par exemple, en temps réel) pour la station sélectionnée et la plage de dates
+// ---------------------------------------------------------------------
+// 2) Provider pour OBS_TR (temps réel) déjà existant
+//    => Renvoie les observations sur la période choisie (<= 1 mois conseillés)
+// ---------------------------------------------------------------------
 final observationsProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final station = ref.watch(selectedStationProvider);
   final dateRange = ref.watch(dateRangeProvider);
+
   if (station == null) {
     return [];
   }
-  
+
   final codeSite = station['code_site'];
   final codeStation = station['code_station'];
-  final libelle = station['libelle_station'];
-  final dio = Dio();
-  
-  // Formatage des dates pour l'affichage dans les logs
+
   final dateFormat = DateFormat('yyyy-MM-dd HH:mm');
   final dateDebut = dateFormat.format(dateRange.start);
   final dateFin = dateFormat.format(dateRange.end);
-  
-  developer.log('Récupération des observations pour la station: $libelle ($codeStation)',
-      name: 'observationsProvider');
-  developer.log('Période: $dateDebut à $dateFin', name: 'observationsProvider');
-  
+
+  developer.log(
+    'Récupération obs_tr pour la station: $codeStation',
+    name: 'observationsProvider',
+  );
+  developer.log('Période: $dateDebut -> $dateFin', name: 'observationsProvider');
+
   try {
+    final dio = Dio();
     final response = await dio.get(
       'https://hubeau.eaufrance.fr/api/v2/hydrometrie/observations_tr',
       queryParameters: {
@@ -71,51 +78,152 @@ final observationsProvider =
         'size': 1000,
       },
     );
-    
+
     final data = response.data['data'] as List<dynamic>;
-    final List<Map<String, dynamic>> observations = data.map((e) => e as Map<String, dynamic>).toList();
-    
-    // Vérification que les données correspondent bien à la station sélectionnée
-    final filteredObservations = observations.where((obs) => 
-      obs['code_station'] == codeStation || 
-      obs['code_site'] == codeSite).toList();
-    
-    if (filteredObservations.isEmpty) {
-      developer.log('Aucune observation trouvée pour cette station', name: 'observationsProvider');
-      return [];
-    }
-    
-    // Afficher les 2 premières observations dans la console pour debug
-    developer.log('Nombre total d\'observations: ${filteredObservations.length}', name: 'observationsProvider');
-    if (filteredObservations.isNotEmpty) {
-      final firstObs = filteredObservations.first;
-      developer.log('Première observation: Station=${firstObs['code_station']}, Date=${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(firstObs['date_obs']))}, Valeur=${firstObs['resultat_obs']}, Type=${firstObs['grandeur_hydro']}', name: 'observationsProvider');
-      if (filteredObservations.length > 1) {
-        final secondObs = filteredObservations[1];
-        developer.log('Deuxième observation: Station=${secondObs['code_station']}, Date=${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(secondObs['date_obs']))}, Valeur=${secondObs['resultat_obs']}, Type=${secondObs['grandeur_hydro']}', name: 'observationsProvider');
-      }
-    }
-    
-    return filteredObservations;
-  } catch (error) {
-    developer.log('Erreur lors de la récupération des observations: $error', name: 'observationsProvider', error: error);
+    final List<Map<String, dynamic>> observations =
+        data.map((e) => e as Map<String, dynamic>).toList();
+
+    // On filtre pour s'assurer que c'est bien la bonne station
+    final filtered = observations.where((obs) {
+      return obs['code_station'] == codeStation || obs['code_site'] == codeSite;
+    }).toList();
+
+    developer.log(
+      'Nombre total d\'observations TR filtrées: ${filtered.length}',
+      name: 'observationsProvider',
+    );
+
+    return filtered;
+  } catch (error, stack) {
+    developer.log(
+      'Erreur lors de la récupération des observations_tr: $error',
+      name: 'observationsProvider',
+      error: error,
+      stackTrace: stack,
+    );
     return [];
   }
 });
 
-// Provider qui distingue les observations de débit (Q) et hauteur (H)
+// ---------------------------------------------------------------------
+// 3) Nouveau Provider pour obs_elab
+//    => Renvoie QmnJ ou QmM en fonction de la durée
+// ---------------------------------------------------------------------
+final observationsElabProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  final station = ref.watch(selectedStationProvider);
+  final dateRange = ref.watch(dateRangeProvider);
+
+  if (station == null) {
+    return [];
+  }
+
+  final codeStation = station['code_station'];
+  final codeSite = station['code_site'];
+
+  // Durée en jours
+  final nbJours = dateRange.end.difference(dateRange.start).inDays;
+  // Choix: si <= 90 jours => QmnJ, sinon => QmM
+  final grandeurElab = nbJours <= 90 ? "QmnJ" : "QmM";
+
+  developer.log(
+    'Récupération obs_elab pour la station: $codeStation avec $grandeurElab',
+    name: 'observationsElabProvider',
+  );
+
+  try {
+    final dio = Dio();
+    final response = await dio.get(
+      'https://hubeau.eaufrance.fr/api/v2/hydrometrie/obs_elab',
+      queryParameters: {
+        // Choisissez ce que vous voulez réellement envoyer :
+        // 'code_entite': codeSite, // ou codeStation
+        'code_entite': codeStation,
+        'grandeur_hydro_elab': grandeurElab,
+        'date_debut_obs_elab': dateRange.start.toIso8601String(),
+        'date_fin_obs_elab': dateRange.end.toIso8601String(),
+        'size': 1000,
+      },
+    );
+
+    final data = response.data['data'] as List<dynamic>;
+
+    // Convertir "date_obs_elab" -> "date_obs"
+    //         "resultat_obs_elab" -> "resultat_obs"
+    // forcer grandeur_hydro="Q" si c'est du débit
+    final List<Map<String, dynamic>> observations = data.map((item) {
+      return {
+        'code_station': item['code_station'] ?? codeStation,
+        'code_site': item['code_site'] ?? codeSite,
+
+        // On renomme pour rester cohérent avec l’UI
+        'date_obs': item['date_obs_elab'],
+        'resultat_obs': item['resultat_obs_elab'],
+
+        // Dans obs_elab, c’est QmnJ ou QmM => on force "Q"
+        'grandeur_hydro': 'Q',
+
+        // On peut aussi conserver d’autres champs
+        'longitude': item['longitude'],
+        'latitude': item['latitude'],
+
+        // ... etc. (libelle_statut, date_prod, etc.) si besoin
+      };
+    }).toList();
+
+    developer.log(
+      'Nombre total d\'observations ELAB: ${observations.length}',
+      name: 'observationsElabProvider',
+    );
+
+    return observations;
+  } catch (e, stack) {
+    developer.log('Erreur obs_elab: $e', error: e, stackTrace: stack);
+    return [];
+  }
+});
+
+// ---------------------------------------------------------------------
+// 4) Provider COMBINÉ : si la plage <= 30j => on utilise obs_tr
+//    sinon => on utilise obs_elab
+// ---------------------------------------------------------------------
+final combinedObservationsProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  final dateRange = ref.watch(dateRangeProvider);
+  final nbJours = dateRange.end.difference(dateRange.start).inDays;
+
+  // Seuil : 30 jours
+  if (nbJours <= 30) {
+    // On se base sur observations TR
+    return ref.watch(observationsProvider.future);
+  } else {
+    // Au-delà de 30 j, on prend obs_elab
+    return ref.watch(observationsElabProvider.future);
+  }
+});
+
+// ---------------------------------------------------------------------
+// 5) Providers de commodité : débit + hauteur
+//    (Ils vont piocher dans "combinedObservationsProvider" désormais)
+// ---------------------------------------------------------------------
+
 final debitObservationsProvider = Provider<List<Map<String, dynamic>>>((ref) {
-  final observationsAsync = ref.watch(observationsProvider);
+  final observationsAsync = ref.watch(combinedObservationsProvider);
   return observationsAsync.maybeWhen(
-    data: (observations) => observations.where((obs) => obs['grandeur_hydro'] == 'Q').toList(),
+    data: (observations) =>
+        observations.where((obs) => obs['grandeur_hydro'] == 'Q').toList(),
     orElse: () => [],
   );
 });
 
+// Pour la hauteur (H), si vous en avez aussi côté obs_elab, vous pourriez l’adapter.
+// Ici, on suppose qu’on récupère la hauteur via l’endpoint TR si existant, ou qu’on
+// fera un traitement similaire dans obs_elab si vous avez des HmnJ/HmM, etc.
 final hauteurObservationsProvider = Provider<List<Map<String, dynamic>>>((ref) {
-  final observationsAsync = ref.watch(observationsProvider);
+  final observationsAsync = ref.watch(combinedObservationsProvider);
   return observationsAsync.maybeWhen(
-    data: (observations) => observations.where((obs) => obs['grandeur_hydro'] == 'H').toList(),
+    data: (observations) =>
+        observations.where((obs) => obs['grandeur_hydro'] == 'H').toList(),
     orElse: () => [],
   );
 });
