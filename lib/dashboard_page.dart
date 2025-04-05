@@ -53,11 +53,10 @@ class DashboardPage extends ConsumerWidget {
           return (obs['resultat_obs'] is num) ? obs['resultat_obs'].toDouble() : 0.0;
         }).toList();
 
-        final debitValues = yValuesDebit.where((value) => !value.isNaN && value >= 0).toList();
-        if (debitValues.isNotEmpty) {
-          debitMoyen = debitValues.reduce((a, b) => a + b) / debitValues.length;
-          final minDebitValue = debitValues.reduce((a, b) => a < b ? a : b);
-          final maxDebitValue = debitValues.reduce((a, b) => a > b ? a : b);
+        if (yValuesDebit.isNotEmpty) {
+          debitMoyen = yValuesDebit.reduce((a, b) => a + b) / yValuesDebit.length; // Moyenne incluant les négatifs
+          final minDebitValue = yValuesDebit.reduce((a, b) => a < b ? a : b);
+          final maxDebitValue = yValuesDebit.reduce((a, b) => a > b ? a : b);
           minDebit = formatValue(minDebitValue, 'm³/s');
           maxDebit = formatValue(maxDebitValue, 'm³/s');
         }
@@ -70,11 +69,10 @@ class DashboardPage extends ConsumerWidget {
           return (obs['resultat_obs'] is num) ? obs['resultat_obs'].toDouble() : 0.0;
         }).toList();
 
-        final hauteurValues = yValuesHauteur.where((value) => !value.isNaN && value >= 0).toList();
-        if (hauteurValues.isNotEmpty) {
-          hauteurMoyenne = hauteurValues.reduce((a, b) => a + b) / hauteurValues.length;
-          final minHauteurValue = hauteurValues.reduce((a, b) => a < b ? a : b);
-          final maxHauteurValue = hauteurValues.reduce((a, b) => a > b ? a : b);
+        if (yValuesHauteur.isNotEmpty) {
+          hauteurMoyenne = yValuesHauteur.reduce((a, b) => a + b) / yValuesHauteur.length; // Moyenne incluant les négatifs
+          final minHauteurValue = yValuesHauteur.reduce((a, b) => a < b ? a : b);
+          final maxHauteurValue = yValuesHauteur.reduce((a, b) => a > b ? a : b);
           minHauteur = formatValue(minHauteurValue, 'm');
           maxHauteur = formatValue(maxHauteurValue, 'm');
         }

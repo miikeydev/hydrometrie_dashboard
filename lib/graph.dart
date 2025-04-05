@@ -194,16 +194,16 @@ class HydroLineChart extends StatelessWidget {
 
   double _getMinY(List<double> values) {
     if (values.isEmpty) return 0;
-    // Trouver le minimum des valeurs et soustraire un peu pour l'esthétique
+    // Trouver le minimum des valeurs et ajouter une marge pour l'esthétique
     double min = values.reduce((a, b) => a < b ? a : b);
-    return min > 0 ? min * 0.9 : min * 1.1;
+    return min > 0 ? min * 0.9 : min * 1.1; // Inclut les valeurs négatives
   }
 
   double _getMaxY(List<double> values) {
     if (values.isEmpty) return 10;
-    // Trouver le maximum des valeurs et ajouter un peu pour l'esthétique
+    // Trouver le maximum des valeurs et ajouter une marge pour l'esthétique
     double max = values.reduce((a, b) => a > b ? a : b);
-    return max * 1.1;
+    return max > 0 ? max * 1.1 : max * 0.9; // Inclut les valeurs négatives
   }
   
   double _calculateInterval(List<double> values) {
