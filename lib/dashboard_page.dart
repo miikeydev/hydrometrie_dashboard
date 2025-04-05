@@ -127,11 +127,11 @@ class DashboardPage extends ConsumerWidget {
                   const SizedBox(width: 12),
 
                   SizedBox(
-                    width: 220,
+                    width: 260, // Augmente la largeur de la section KPI
                     child: Column(
                       children: [
                         Expanded(
-                          flex: 5,
+                          flex: 6, // Augmente la proportion de la section KPI
                           child: Column(
                             children: [
                               Expanded(
@@ -159,7 +159,7 @@ class DashboardPage extends ConsumerWidget {
                         const SizedBox(height: 12),
 
                         Expanded(
-                          flex: 3,
+                          flex: 4, // Ajuste la proportion des statistiques
                           child: Column(
                             children: [
                               Expanded(

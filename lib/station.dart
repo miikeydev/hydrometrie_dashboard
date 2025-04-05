@@ -32,10 +32,6 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
   late dp.DatePeriod _currentPeriod;
   bool _showClearButton = false;
   
-  // Debouncer pour réduire les appels API lors de la recherche
-  Timer? _debounceTimer;
-  static const Duration _debounceDuration = Duration(milliseconds: 300);
-  
   @override
   void initState() {
     super.initState();
@@ -65,21 +61,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
-    _debounceTimer?.cancel();
     super.dispose();
-  }
-  
-  void _onSearchChanged(String query) {
-    // Annuler le timer précédent s'il existe
-    _debounceTimer?.cancel();
-    
-    // Mettre en place un nouveau timer pour retarder la recherche
-    _debounceTimer = Timer(_debounceDuration, () {
-      // Ne mettre à jour le provider que si le texte a changé
-      if (ref.read(searchTextProvider) != query) {
-        ref.read(searchTextProvider.notifier).state = query;
-      }
-    });
   }
   
   void _clearSearch() {
@@ -147,15 +129,17 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
                   textEditingController: _searchController,
                   focusNode: _searchFocusNode,
                   optionsBuilder: (TextEditingValue textEditingValue) {
-                    if (textEditingValue.text.isEmpty) {
+                    if (textEditingValue.text.trim().isEmpty) { // Utilisation de trim() pour éviter les espaces inutiles
                       return const Iterable<Map<String, dynamic>>.empty();
                     }
                     return stationSuggestionsAsync.when(
-                      data: (stations) => stations.where((station) {
-                        final stationName = (station['libelle_station'] ?? '').toLowerCase();
+                      data: (stations) {
                         final searchText = textEditingValue.text.toLowerCase();
-                        return stationName.contains(searchText);
-                      }),
+                        return stations.where((station) {
+                          final stationName = (station['libelle_station'] ?? '').toLowerCase();
+                          return stationName.contains(searchText) || _isSimilar(stationName, searchText);
+                        });
+                      },
                       loading: () => const [],
                       error: (_, __) => const [],
                     );
@@ -186,7 +170,10 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
                           borderSide: BorderSide(color: Colors.blue, width: 2),
                         ),
                       ),
-                      onChanged: _onSearchChanged, // Déclenche une requête à chaque caractère
+                      onChanged: (query) {
+                        // Met à jour immédiatement le provider sans attendre un espace ou autre action
+                        ref.read(searchTextProvider.notifier).state = query.trim(); // Utilisation de trim() pour éviter les espaces
+                      },
                     );
                   },
                   optionsViewBuilder: (context, onSelected, options) {
@@ -200,7 +187,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
                       child: Material(
                         elevation: 4.0,
                         borderRadius: BorderRadius.circular(8),
-                        color: Colors.white,
+                        color: Colors.white.withOpacity(1), 
                         child: ConstrainedBox(
                           constraints: BoxConstraints(maxWidth: fieldWidth, maxHeight: 300),
                           child: options.isEmpty
@@ -326,5 +313,33 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
     final libelle = option['libelle_station'] ?? '';
     final code = option['code_station'] ?? '';
     return "$libelle ($code)";
+  }
+
+  /// Fonction pour vérifier si deux chaînes sont similaires (tolérance aux fautes de frappe)
+  bool _isSimilar(String stationName, String searchText) {
+    int distance = _levenshteinDistance(stationName, searchText);
+    return distance <= 2; // Tolère jusqu'à 2 caractères de différence
+  }
+
+  /// Calcul de la distance de Levenshtein (nombre minimal d'opérations nécessaires pour transformer une chaîne en une autre)
+  int _levenshteinDistance(String s1, String s2) {
+    final len1 = s1.length;
+    final len2 = s2.length;
+    final dp = List.generate(len1 + 1, (_) => List<int>.filled(len2 + 1, 0));
+
+    for (int i = 0; i <= len1; i++) {
+      for (int j = 0; j <= len2; j++) {
+        if (i == 0) {
+          dp[i][j] = j;
+        } else if (j == 0) {
+          dp[i][j] = i;
+        } else if (s1[i - 1] == s2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1];
+        } else {
+          dp[i][j] = 1 + [dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]].reduce((a, b) => a < b ? a : b);
+        }
+      }
+    }
+    return dp[len1][len2];
   }
 }

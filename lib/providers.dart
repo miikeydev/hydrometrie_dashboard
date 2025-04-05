@@ -35,8 +35,20 @@ final stationSuggestionsProvider =
     },
   );
   final data = response.data['data'] as List<dynamic>;
-  return data.map((e) => e as Map<String, dynamic>).toList();
+  final stations = data.map((e) => e as Map<String, dynamic>).toList();
+
+  // Ajout de la logique de similarité
+  return stations.where((station) {
+    final stationName = (station['libelle_station'] ?? '').toLowerCase();
+    return stationName.contains(searchText.toLowerCase()) ||
+        _isSimilar(stationName, searchText.toLowerCase());
+  }).toList();
 });
+
+bool _isSimilar(String stationName, String searchText) {
+  // Implémentez ici votre logique de similarité (exemple : distance de Levenshtein)
+  return false; // Remplacez par votre logique
+}
 
 // Provider pour récupérer les observations (par exemple, en temps réel) pour la station sélectionnée et la plage de dates
 final observationsProvider =
