@@ -25,6 +25,10 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
   final GlobalKey _fieldKey = GlobalKey();
   late dp.DatePeriod _currentPeriod;
   bool _showClearButton = false;
+  DateTime _currentDisplayedMonth = DateTime.now();
+
+
+
   
   // Debouncer pour réduire les appels API lors de la recherche
   Timer? _debounceTimer;
@@ -37,6 +41,8 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
     _currentPeriod = dp.DatePeriod(
       widget.initialDateRange.start,
       widget.initialDateRange.end,
+    
+
     );
     // Afficher le bouton d'effacement si le texte n'est pas vide
     _showClearButton = _searchController.text.isNotEmpty;
@@ -97,6 +103,24 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
     ref.read(selectedStationProvider.notifier).state = null;
     _clearSearch();
   }
+
+  void _goToToday() {
+  final now = DateTime.now();
+  final dp.DatePeriod todayPeriod = dp.DatePeriod(
+    now.subtract(const Duration(days: 5)),
+    now,
+  );
+  setState(() {
+    _currentPeriod = todayPeriod;
+    _currentDisplayedMonth = now;
+
+  });
+  ref.read(dateRangeProvider.notifier).state = DateTimeRange(
+    start: todayPeriod.start,
+    end: todayPeriod.end,
+  );
+}
+
   
   @override
   Widget build(BuildContext context) {
@@ -263,6 +287,24 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
           ),
             
           const SizedBox(height: 8),
+
+          const SizedBox(height: 8),
+
+Align(
+  alignment: Alignment.centerLeft,
+  child: TextButton.icon(
+    onPressed: _goToToday,
+    icon: const Icon(Icons.today),
+    label: const Text("Revenir à aujourd'hui"),
+    style: TextButton.styleFrom(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    ),
+  ),
+),
+
+const SizedBox(height: 8),
+
             
           // Sélecteur de dates (calendrier inline)
           Expanded(
@@ -277,8 +319,10 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: dp.RangePicker(
+                    key: ValueKey(_currentPeriod.start),
                     selectedPeriod: _currentPeriod,
                     onChanged: _onPeriodChanged,
+                    
                     firstDate: DateTime(2000),
                     lastDate: DateTime(2100),
                     datePickerStyles: dp.DatePickerRangeStyles(
