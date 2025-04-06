@@ -113,7 +113,7 @@ class DashboardPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SizedBox(
-                    width: 300, 
+                    width: 350, // Augmenté de 300 à 350
                     child: StationInfoPanel(
                       initialDateRange: DateTimeRange(
                         start: DateTime.now().subtract(const Duration(days: 5)),
@@ -124,10 +124,10 @@ class DashboardPage extends ConsumerWidget {
                       maxSelectableDate: DateTime.now(), // Empêche la sélection au-delà de la date actuelle
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16), // Espacement ajusté
 
                   SizedBox(
-                    width: 260, // Augmente la largeur de la section KPI
+                    width: 300, // Augmenté de 260 à 300
                     child: Column(
                       children: [
                         Expanded(
@@ -208,7 +208,7 @@ class DashboardPage extends ConsumerWidget {
                     ),
                   ),
 
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16), // Espacement ajusté
 
                   Expanded(
                     child: Column(

@@ -77,8 +77,8 @@ class HydroLineChart extends StatelessWidget {
                       getTitlesWidget: (value, meta) {
                         // Affiche seulement quelques dates clés pour éviter la surcharge
                         if (hasData && value.toInt() >= 0 && value.toInt() < dates.length) {
-                          // Affiche uniquement certaines dates pour éviter la surcharge
-                          if (dates.length <= 5 || value.toInt() % (dates.length ~/ 5) == 0) {
+                          final step = (dates.length / 5).ceil(); // Max 5 valeurs
+                          if (value.toInt() % step == 0) {
                             return Padding(
                               padding: const EdgeInsets.only(top: 10.0),
                               child: Text(
@@ -95,11 +95,11 @@ class HydroLineChart extends StatelessWidget {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      interval: _calculateInterval(values), // Calcule un intervalle optimal
                       reservedSize: 45,
                       getTitlesWidget: (value, meta) {
                         // Affiche uniquement un nombre limité de valeurs
-                        if (value % _calculateInterval(values) == 0) {
+                        final step = _calculateStep(values, 4); // Max 4 valeurs
+                        if (value % step == 0) {
                           return Text(
                             _formatValue(value),
                             style: const TextStyle(fontSize: 10),
@@ -217,6 +217,16 @@ class HydroLineChart extends StatelessWidget {
     return range / 5;
   }
   
+  double _calculateStep(List<double> values, int maxSteps) {
+    if (values.isEmpty) return 1.0;
+    double min = values.reduce((a, b) => a < b ? a : b);
+    double max = values.reduce((a, b) => a > b ? a : b);
+    double range = max - min;
+
+    if (range <= 0) return 1.0;
+    return (range / maxSteps).ceilToDouble();
+  }
+
   // Formater les valeurs pour les afficher de façon plus lisible (K, M, etc.)
   String _formatValue(double value) {
     if (value >= 1000000) {

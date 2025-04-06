@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_date_pickers/flutter_date_pickers.dart' as dp;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers.dart';
-import 'dart:developer' as developer;
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as latlong2;
 import 'dart:async';
 
 class StationInfoPanel extends ConsumerStatefulWidget {
@@ -10,15 +11,15 @@ class StationInfoPanel extends ConsumerStatefulWidget {
   final DateTimeRange initialDateRange;
   final DateTime firstDate;
   final DateTime lastDate;
-  final DateTime maxSelectableDate; // Nouvelle propriété
-  
+  final DateTime maxSelectableDate;
+
   const StationInfoPanel({
     Key? key,
     this.initialSearchText = '',
     required this.initialDateRange,
     required this.firstDate,
     required this.lastDate,
-    required this.maxSelectableDate, // Initialisation
+    required this.maxSelectableDate,
   }) : super(key: key);
 
   @override
@@ -31,50 +32,66 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
   final GlobalKey _fieldKey = GlobalKey();
   late dp.DatePeriod _currentPeriod;
   bool _showClearButton = false;
-  
+  Timer? _searchDebounce;
+
   @override
   void initState() {
     super.initState();
+    final today = DateTime.now();
+    final validStartDate = today.isBefore(widget.firstDate) ? widget.firstDate : today;
+    final validEndDate = today.isAfter(widget.lastDate) ? widget.lastDate : today;
+
+    _currentPeriod = dp.DatePeriod(validStartDate, validEndDate);
     _searchController.text = widget.initialSearchText;
-    _currentPeriod = dp.DatePeriod(
-      widget.initialDateRange.start,
-      widget.initialDateRange.end,
-    );
-    // Afficher le bouton d'effacement si le texte n'est pas vide
     _showClearButton = _searchController.text.isNotEmpty;
-    
-    // Ajouter un listener pour détecter les changements de texte
+
     _searchController.addListener(() {
+      if (_searchDebounce?.isActive ?? false) {
+        _searchDebounce!.cancel();
+      }
+      _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+        ref.read(searchTextProvider.notifier).state = _searchController.text;
+      });
       setState(() {
         _showClearButton = _searchController.text.isNotEmpty;
       });
     });
-    
-    // Retarder la modification du provider après le build initial.
+
     Future.microtask(() {
-      ref.read(dateRangeProvider.notifier).state = widget.initialDateRange;
+      ref.read(dateRangeProvider.notifier).state = DateTimeRange(
+        start: validStartDate,
+        end: validEndDate,
+      );
       ref.read(searchTextProvider.notifier).state = widget.initialSearchText;
     });
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
   }
-  
-  void _clearSearch() {
+
+  void _resetFilters() {
     setState(() {
+      final today = DateTime.now();
+      final validStartDate = today.isBefore(widget.firstDate) ? widget.firstDate : today;
+      final validEndDate = today.isAfter(widget.lastDate) ? widget.lastDate : today;
+
       _searchController.clear();
       ref.read(searchTextProvider.notifier).state = '';
-      // Optional: Focus le champ pour permettre une nouvelle saisie immédiate
-      _searchFocusNode.requestFocus();
+      ref.read(dateRangeProvider.notifier).state = DateTimeRange(
+        start: validStartDate,
+        end: validEndDate,
+      );
+      _currentPeriod = dp.DatePeriod(validStartDate, validEndDate);
     });
+    _searchFocusNode.requestFocus();
   }
-  
+
   void _onPeriodChanged(dp.DatePeriod newPeriod) {
-    // Ajuste les dates pour éviter les dépassements et les incohérences
     final adjustedStart = newPeriod.start.isAfter(widget.maxSelectableDate)
         ? widget.maxSelectableDate
         : newPeriod.start;
@@ -82,7 +99,6 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
         ? widget.maxSelectableDate
         : newPeriod.end;
 
-    // Empêche le début d'être après la fin
     final validStart = adjustedStart.isAfter(adjustedEnd) ? adjustedEnd : adjustedStart;
 
     setState(() {
@@ -93,18 +109,12 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
       end: adjustedEnd,
     );
   }
-  
-  void _resetSelectedStation() {
-    ref.read(selectedStationProvider.notifier).state = null;
-    _clearSearch();
-  }
-  
+
   @override
   Widget build(BuildContext context) {
-    // Récupère les suggestions de stations depuis le provider
     final stationSuggestionsAsync = ref.watch(stationSuggestionsProvider);
     final selectedStation = ref.watch(selectedStationProvider);
-    
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[50],
@@ -121,15 +131,15 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Search bar and reset button
           Row(
             children: [
-              // Barre de recherche
               Expanded(
                 child: RawAutocomplete<Map<String, dynamic>>(
                   textEditingController: _searchController,
                   focusNode: _searchFocusNode,
                   optionsBuilder: (TextEditingValue textEditingValue) {
-                    if (textEditingValue.text.trim().isEmpty) { // Utilisation de trim() pour éviter les espaces inutiles
+                    if (textEditingValue.text.trim().isEmpty) {
                       return const Iterable<Map<String, dynamic>>.empty();
                     }
                     return stationSuggestionsAsync.when(
@@ -152,6 +162,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
                   },
                   fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
                     return TextField(
+                      key: _fieldKey,
                       controller: controller,
                       focusNode: focusNode,
                       decoration: InputDecoration(
@@ -171,25 +182,22 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
                         ),
                       ),
                       onChanged: (query) {
-                        // Met à jour immédiatement le provider sans attendre un espace ou autre action
-                        ref.read(searchTextProvider.notifier).state = query.trim(); // Utilisation de trim() pour éviter les espaces
+                        ref.read(searchTextProvider.notifier).state = query.trim();
                       },
                     );
                   },
                   optionsViewBuilder: (context, onSelected, options) {
-                    double fieldWidth = 200;
                     final RenderBox? renderBox = _fieldKey.currentContext?.findRenderObject() as RenderBox?;
-                    if (renderBox != null) {
-                      fieldWidth = renderBox.size.width;
-                    }
+                    final double fieldWidth = renderBox?.size.width ?? 0; // Récupère la largeur de la barre de recherche
                     return Align(
                       alignment: Alignment.topLeft,
                       child: Material(
                         elevation: 4.0,
                         borderRadius: BorderRadius.circular(8),
-                        color: Colors.white.withOpacity(1), 
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: fieldWidth, maxHeight: 300),
+                        color: Colors.white.withOpacity(1),
+                        child: Container(
+                          width: fieldWidth, // Ajuste la largeur des suggestions à celle de la barre de recherche
+                          constraints: const BoxConstraints(maxHeight: 300),
                           child: options.isEmpty
                               ? Padding(
                                   padding: const EdgeInsets.all(16.0),
@@ -210,7 +218,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
                                     return ListTile(
                                       dense: true,
                                       title: Text(
-                                        "$libelle ($code)", 
+                                        "$libelle ($code)",
                                         style: const TextStyle(color: Colors.black),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -224,31 +232,32 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
                   },
                 ),
               ),
-
               const SizedBox(width: 8),
-
-              // Bouton "Réinitialiser la sélection" stylé
-              if (selectedStation != null)
-                ElevatedButton(
-                  onPressed: _resetSelectedStation,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue, // Fond bleu
-                    shape: const CircleBorder(), // Bouton circulaire
-                    padding: const EdgeInsets.all(12), // Taille du bouton
+              // Reset button
+              ElevatedButton(
+                onPressed: _resetFilters,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[200], // Gris plus clair
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
-                    Icons.refresh, // Icône de flèche
-                    color: Colors.white, // Flèche blanche
-                    size: 20,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 21, // Augmente la hauteur du bouton
                   ),
                 ),
+                child: const Icon(
+                  Icons.refresh,
+                  color: Colors.black,
+                  size: 20,
+                ),
+              ),
             ],
           ),
-          
-          // Espacement entre la barre de recherche et le calendrier
+
           const SizedBox(height: 16),
-          
-          // Titre du sélecteur de date
+
+          // Date range picker
           Text(
             "Plage de dates",
             style: TextStyle(
@@ -257,10 +266,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
               color: Colors.grey[800],
             ),
           ),
-            
           const SizedBox(height: 8),
-            
-          // Sélecteur de dates (calendrier inline)
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -304,42 +310,103 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
               ),
             ),
           ),
+
+          const SizedBox(height: 16),
+
+          // Map
+          Text(
+            "Carte des stations hydrométriques",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16), // Rounded corners
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias, // Ensures content respects rounded corners
+              child: FlutterMap(
+                options: MapOptions(
+                  center: latlong2.LatLng(47.0, 2.0), // Center of France
+                  zoom: 6.0,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                    subdomains: ['a', 'b', 'c', 'd'],
+                  ),
+                  MarkerLayer(
+                    markers: stationSuggestionsAsync.when(
+                      data: (stations) {
+                        return stations
+                            .where((station) => station['latitude'] != null && station['longitude'] != null)
+                            .map((station) {
+                          final isSelected = ref.watch(selectedStationProvider)?['code_station'] == station['code_station'];
+                          return Marker(
+                            point: latlong2.LatLng(station['latitude'], station['longitude']),
+                            builder: (ctx) => Icon(
+                              Icons.location_on,
+                              color: isSelected ? Colors.blue[800] : Colors.blue,
+                              size: isSelected ? 36.0 : 30.0,
+                            ),
+                          );
+                        }).toList();
+                      },
+                      loading: () => [],
+                      error: (error, stack) => [],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
-  
-  String displayStringForOption(Map<String, dynamic> option) {
-    final libelle = option['libelle_station'] ?? '';
-    final code = option['code_station'] ?? '';
-    return "$libelle ($code)";
-  }
+}
 
-  /// Fonction pour vérifier si deux chaînes sont similaires (tolérance aux fautes de frappe)
-  bool _isSimilar(String stationName, String searchText) {
-    int distance = _levenshteinDistance(stationName, searchText);
-    return distance <= 2; // Tolère jusqu'à 2 caractères de différence
-  }
+String displayStringForOption(Map<String, dynamic> option) {
+  final libelle = option['libelle_station'] ?? '';
+  final code = option['code_station'] ?? '';
+  return "$libelle ($code)";
+}
 
-  /// Calcul de la distance de Levenshtein (nombre minimal d'opérations nécessaires pour transformer une chaîne en une autre)
-  int _levenshteinDistance(String s1, String s2) {
-    final len1 = s1.length;
-    final len2 = s2.length;
-    final dp = List.generate(len1 + 1, (_) => List<int>.filled(len2 + 1, 0));
+/// Fonction pour vérifier si deux chaînes sont similaires (tolérance aux fautes de frappe)
+bool _isSimilar(String stationName, String searchText) {
+  int distance = _levenshteinDistance(stationName, searchText);
+  return distance <= 2;
+}
 
-    for (int i = 0; i <= len1; i++) {
-      for (int j = 0; j <= len2; j++) {
-        if (i == 0) {
-          dp[i][j] = j;
-        } else if (j == 0) {
-          dp[i][j] = i;
-        } else if (s1[i - 1] == s2[j - 1]) {
-          dp[i][j] = dp[i - 1][j - 1];
-        } else {
-          dp[i][j] = 1 + [dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]].reduce((a, b) => a < b ? a : b);
-        }
+/// Calcul de la distance de Levenshtein (nombre minimal d'opérations nécessaires pour transformer une chaîne en une autre)
+int _levenshteinDistance(String s1, String s2) {
+  final len1 = s1.length;
+  final len2 = s2.length;
+  final dp = List.generate(len1 + 1, (_) => List<int>.filled(len2 + 1, 0));
+
+  for (int i = 0; i <= len1; i++) {
+    for (int j = 0; j <= len2; j++) {
+      if (i == 0) {
+        dp[i][j] = j;
+      } else if (j == 0) {
+        dp[i][j] = i;
+      } else if (s1[i - 1] == s2[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        dp[i][j] = 1 + [dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]].reduce((a, b) => a < b ? a : b);
       }
     }
-    return dp[len1][len2];
   }
+  return dp[len1][len2];
 }
