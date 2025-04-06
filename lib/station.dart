@@ -26,10 +26,11 @@ class StationInfoPanel extends ConsumerStatefulWidget {
   ConsumerState<StationInfoPanel> createState() => _StationInfoPanelState();
 }
 
-class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
+class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   final GlobalKey _fieldKey = GlobalKey();
+  final MapController _mapController = MapController(); // Initialisation du MapController
   late dp.DatePeriod _currentPeriod;
   bool _showClearButton = false;
   Timer? _searchDebounce;
@@ -87,6 +88,9 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
         end: validEndDate,
       );
       _currentPeriod = dp.DatePeriod(validStartDate, validEndDate);
+
+      // Recentre la carte sur la France avec un zoom fluide
+      _animatedMapMove(latlong2.LatLng(47.0, 2.0), 6.0); // Centre de la France avec un zoom par défaut
     });
     _searchFocusNode.requestFocus();
   }
@@ -108,6 +112,79 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
       start: validStart,
       end: adjustedEnd,
     );
+  }
+
+  void _onStationSelected(Map<String, dynamic> selection) async {
+    String stationName = selection['libelle_station'] ?? '';
+    if (stationName.isEmpty) {
+      debugPrint("Nom de la station vide, impossible de récupérer les coordonnées.");
+      return;
+    }
+
+    // Vérifiez si les coordonnées sont disponibles dans l'objet geometry
+    final geometry = selection['geometry'];
+    if (geometry != null && geometry['coordinates'] != null) {
+      final coordinates = geometry['coordinates'];
+      if (coordinates is List && coordinates.length == 2) {
+        final longitude = coordinates[0];
+        final latitude = coordinates[1];
+        debugPrint("Coordonnées de la station sélectionnée :");
+        debugPrint("Nom : $stationName");
+        debugPrint("Longitude : $longitude");
+        debugPrint("Latitude : $latitude");
+
+        // Animation vers la station sur la carte
+        _animatedMapMove(latlong2.LatLng(latitude, longitude), 13.0);
+
+        // Mise à jour du provider avec les coordonnées obtenues
+        ref.read(selectedStationProvider.notifier).state = {
+          ...selection,
+          'latitude': latitude,
+          'longitude': longitude,
+        };
+        return;
+      }
+    }
+
+    debugPrint("Impossible de récupérer les coordonnées pour la station : $stationName");
+  }
+
+  void _animatedMapMove(latlong2.LatLng dest, double destZoom) {
+    final currentZoom = _mapController.zoom;
+    final latTween = Tween<double>(
+      begin: _mapController.center.latitude,
+      end: dest.latitude,
+    );
+    final lngTween = Tween<double>(
+      begin: _mapController.center.longitude,
+      end: dest.longitude,
+    );
+    final zoomTween = Tween<double>(
+      begin: currentZoom,
+      end: destZoom,
+    );
+
+    final controller = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+
+    final animation = CurvedAnimation(
+      parent: controller,
+      curve: Curves.easeInOut,
+    );
+
+    controller.addListener(() {
+      _mapController.move(
+        latlong2.LatLng(
+          latTween.evaluate(animation),
+          lngTween.evaluate(animation),
+        ),
+        zoomTween.evaluate(animation),
+      );
+    });
+
+    controller.forward().then((_) => controller.dispose());
   }
 
   @override
@@ -157,7 +234,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
                   displayStringForOption: displayStringForOption,
                   onSelected: (Map<String, dynamic> selection) {
                     _searchController.text = displayStringForOption(selection);
-                    ref.read(selectedStationProvider.notifier).state = selection;
+                    _onStationSelected(selection);
                     FocusScope.of(context).unfocus();
                   },
                   fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
@@ -337,6 +414,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
               ),
               clipBehavior: Clip.antiAlias, // Ensures content respects rounded corners
               child: FlutterMap(
+                mapController: _mapController, // Utilisation du MapController initialisé
                 options: MapOptions(
                   center: latlong2.LatLng(47.0, 2.0), // Center of France
                   zoom: 6.0,
