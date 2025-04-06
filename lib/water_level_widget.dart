@@ -6,6 +6,7 @@ class WaterLevelWidget extends StatefulWidget {
   final double size;
   final String formattedValue; // Valeur formatée (moyenne)
   final String percentage; // Pourcentage à afficher
+  final String title; // Ajout d'un paramètre pour le titre
 
   const WaterLevelWidget({
     Key? key,
@@ -13,6 +14,7 @@ class WaterLevelWidget extends StatefulWidget {
     required this.size,
     required this.formattedValue,
     required this.percentage,
+    required this.title, // Rendre le titre obligatoire
   }) : super(key: key);
 
   @override
@@ -23,6 +25,9 @@ class _WaterLevelWidgetState extends State<WaterLevelWidget>
     with TickerProviderStateMixin {
   late AnimationController _waveController1;
   late AnimationController _waveController2;
+  late AnimationController _fillAnimationController;
+  late Animation<double> _fillAnimation;
+  double _prevFillPercent = 0.1; // Augmenté à 0.1 (10%)
 
   @override
   void initState() {
@@ -36,52 +41,61 @@ class _WaterLevelWidgetState extends State<WaterLevelWidget>
       vsync: this,
       duration: const Duration(milliseconds: 3000),
     )..repeat();
+    
+    _fillAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500), // Animation plus lente
+    );
+
+    // Initialiser l'animation avec la valeur initiale ou 10% par défaut pour les cas sans données
+    final targetFill = widget.fillPercent == 0 ? 0.1 : widget.fillPercent;
+    _fillAnimation = Tween<double>(begin: _prevFillPercent, end: targetFill).animate(
+      CurvedAnimation(
+        parent: _fillAnimationController,
+        curve: Curves.easeInOut, // Courbe douce
+      ),
+    );
+    
+    _fillAnimationController.forward();
+  }
+  
+  @override
+  void didUpdateWidget(WaterLevelWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.fillPercent != widget.fillPercent) {
+      // Stocker la valeur actuelle comme point de départ
+      _prevFillPercent = _fillAnimation.value;
+      
+      // Créer une nouvelle animation vers la nouvelle cible (au moins 10% pour les cas sans données)
+      final targetFill = widget.fillPercent == 0 ? 0.1 : widget.fillPercent;
+      _fillAnimation = Tween<double>(begin: _prevFillPercent, end: targetFill).animate(
+        CurvedAnimation(
+          parent: _fillAnimationController,
+          curve: Curves.easeInOut,
+        ),
+      );
+      
+      _fillAnimationController.reset();
+      _fillAnimationController.forward();
+    }
   }
 
   @override
   void dispose() {
     _waveController1.dispose();
     _waveController2.dispose();
+    _fillAnimationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Si le formattedValue est N/A et pourcentage est --%, on affiche "Aucune donnée"
-    if (widget.formattedValue == 'N/A' && widget.percentage == "--%") {
-      return Container(
-        width: widget.size,
-        height: widget.size,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Center(
-          child: Text(
-            "Aucune donnée",
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      );
-    }
+    // Pour les cas sans données, afficher une valeur par défaut
+    final bool hasData = widget.formattedValue != 'N/A' && widget.percentage != "--%";
+    final String displayValue = hasData ? widget.formattedValue : "-";
 
-    // Identifier le type de données pour déterminer le titre
-    String title = widget.formattedValue.endsWith("m³/s") ? "Débit" : "Hauteur";
-
-    // Sinon, on affiche le widget d'eau animé
     return AnimatedBuilder(
-      animation: Listenable.merge([_waveController1, _waveController2]),
+      animation: Listenable.merge([_waveController1, _waveController2, _fillAnimationController]),
       builder: (context, child) {
         return Container(
           width: widget.size,
@@ -99,17 +113,17 @@ class _WaterLevelWidgetState extends State<WaterLevelWidget>
           ),
           child: Stack(
             children: [
-              // Le CustomPaint pour les vagues
+              // Le CustomPaint pour les vagues (toujours présent, même sans données)
               CustomPaint(
                 painter: WaterPainter(
-                  fillPercent: widget.fillPercent,
+                  fillPercent: _fillAnimation.value,
                   waveValue1: _waveController1.value * 2 * pi,
                   waveValue2: _waveController2.value * 2 * pi,
                 ),
                 size: Size(widget.size, widget.size),
               ),
               
-              // Titre au centre gauche
+              // Titre au centre gauche - Utiliser le titre fourni
               Positioned(
                 top: 8,
                 left: 16,
@@ -120,17 +134,17 @@ class _WaterLevelWidgetState extends State<WaterLevelWidget>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    title,
+                    widget.title, // Utiliser le titre fourni plutôt que de le déduire
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                      color: Colors.black, // Changé en noir
                     ),
                   ),
                 ),
               ),
               
-              // Affichage de la valeur formatée et du pourcentage à droite
+              // Affichage de la valeur formatée à droite (sans le pourcentage)
               Positioned(
                 top: 8,
                 right: 8,
@@ -140,26 +154,13 @@ class _WaterLevelWidgetState extends State<WaterLevelWidget>
                     color: Colors.white.withOpacity(0.7),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      // Valeur formatée (ex: "500k")
-                      Text(
-                        widget.formattedValue,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      // Pourcentage (ex: "65%")
-                      Text(
-                        widget.percentage,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    displayValue,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: hasData ? Colors.black : Colors.grey,
+                    ),
                   ),
                 ),
               ),

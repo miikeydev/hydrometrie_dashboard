@@ -66,8 +66,8 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
       );
       ref.read(searchTextProvider.notifier).state = widget.initialSearchText;
 
-      // Charger la France entière au début
-      _animatedMapMove(latlong2.LatLng(47.0, 2.0), 5); // Zoom adapté pour afficher la France entière
+      // Définir la position et le zoom initiaux de la France
+      _animatedMapMove(latlong2.LatLng(47.0, 2.0), 5.0); // Zoom à 5.0 pour la France entière
     });
   }
 
@@ -95,7 +95,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
       _currentPeriod = dp.DatePeriod(validStartDate, validEndDate);
 
       // Recentre la carte sur la France avec un zoom fluide
-      _animatedMapMove(latlong2.LatLng(47.0, 2.0), 6.0); // Centre de la France avec un zoom par défaut
+      _animatedMapMove(latlong2.LatLng(47.0, 2.0), 5.0); // Zoom initial à 5.0 pour voir la France entière
     });
     _searchFocusNode.requestFocus();
   }

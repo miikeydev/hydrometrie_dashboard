@@ -224,6 +224,7 @@ class DashboardPage extends ConsumerWidget {
                                   children: [
                                     Expanded(
                                       child: WaterLevelWidget(
+                                        // Toujours montrer au moins 10% de remplissage pour les cas sans données
                                         fillPercent: (debitMoyen > 0 && _isValidDouble(minDebit) && _isValidDouble(maxDebit))
                                             ? (() {
                                                 try {
@@ -236,10 +237,10 @@ class DashboardPage extends ConsumerWidget {
                                                   // Calcul du pourcentage comme position relative entre min et max
                                                   return ((debitMoyen - minVal) / (maxVal - minVal)).clamp(0.0, 1.0);
                                                 } catch (e) {
-                                                  return 0.5; // Valeur par défaut en cas d'erreur
+                                                  return 0.1; // 10% par défaut en cas d'erreur
                                                 }
                                               })()
-                                            : 0.0,
+                                            : 0.1, // 10% pour les cas sans données
                                         size: double.infinity,
                                         formattedValue: debitMoyen > 0 ? formatValue(debitMoyen, 'm³/s') : 'N/A',
                                         percentage: (debitMoyen > 0 && _isValidDouble(minDebit) && _isValidDouble(maxDebit)) 
@@ -257,6 +258,7 @@ class DashboardPage extends ConsumerWidget {
                                                 }
                                               })()
                                             : "--%",
+                                        title: "Moyenne Q", // Titre spécifique pour le widget du débit
                                       ),
                                     ),
                                     const SizedBox(height: 12),
@@ -274,10 +276,10 @@ class DashboardPage extends ConsumerWidget {
                                                   // Calcul du pourcentage comme position relative entre min et max
                                                   return ((hauteurMoyenne - minVal) / (maxVal - minVal)).clamp(0.0, 1.0);
                                                 } catch (e) {
-                                                  return 0.5; // Valeur par défaut en cas d'erreur
+                                                  return 0.1; // 10% par défaut en cas d'erreur
                                                 }
                                               })()
-                                            : 0.0,
+                                            : 0.1, // 10% pour les cas sans données
                                         size: double.infinity,
                                         formattedValue: hauteurMoyenne > 0 ? formatValue(hauteurMoyenne, 'm') : 'N/A',
                                         percentage: (hauteurMoyenne > 0 && _isValidDouble(minHauteur) && _isValidDouble(maxHauteur))
@@ -295,6 +297,7 @@ class DashboardPage extends ConsumerWidget {
                                                 }
                                               })()
                                             : "--%",
+                                        title: "Moyenne H", // Titre spécifique pour le widget de la hauteur
                                       ),
                                     ),
                                   ],
