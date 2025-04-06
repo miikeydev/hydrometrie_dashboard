@@ -53,15 +53,11 @@ class _HydroLineChartState extends State<HydroLineChart>
         ? const Color(0xFF64B5F6) // Bleu plus clair pour hauteur
         : const Color(0xFF1976D2); // Bleu plus foncé pour débit;
 
-    final Color gradientColor = widget.isHeightChart
-        ? const Color(0xFFBBDEFB).withOpacity(0.5) // Très clair pour hauteur
-        : const Color(0xFF2196F3).withOpacity(0.5); // Moyennement clair pour débit
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12), // Uniformisation du radius
         boxShadow: const [
           BoxShadow(
             color: Colors.black12,
@@ -144,8 +140,7 @@ class _HydroLineChartState extends State<HydroLineChart>
 
                                 for (int i = 0; i <= 4; i++) {
                                   final checkValue = minY + i * step;
-                                  if ((value - checkValue).abs() <
-                                      step / 10) {
+                                  if ((value - checkValue).abs() < step / 10) {
                                     return Text(
                                       _formatValue(value),
                                       style: const TextStyle(fontSize: 10),
@@ -176,10 +171,10 @@ class _HydroLineChartState extends State<HydroLineChart>
                       minY: hasData ? _getMinY(widget.values) : 0,
                       maxY: hasData ? _getMaxY(widget.values) : 10,
                       lineBarsData: [
+                        // Ligne principale
                         LineChartBarData(
                           spots: hasData
-                              ? List.generate(widget.dates.length,
-                                  (index) {
+                              ? List.generate(widget.dates.length, (index) {
                                   return FlSpot(index.toDouble(),
                                       widget.values[index]);
                                 })
@@ -198,14 +193,17 @@ class _HydroLineChartState extends State<HydroLineChart>
                             show: true,
                             gradient: LinearGradient(
                               colors: [
-                                gradientColor,
-                                gradientColor.withOpacity(0.1),
+                                mainColor.withOpacity(0.5),
+                                mainColor.withOpacity(0.1),
                               ],
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                             ),
                           ),
                         ),
+                        // Ligne de tendance
+                        if (hasData)
+                          _buildTrendLine(widget.values),
                       ],
                       lineTouchData: LineTouchData(
                         enabled: true,
@@ -257,6 +255,49 @@ class _HydroLineChartState extends State<HydroLineChart>
         ],
       ),
     );
+  }
+
+  LineChartBarData _buildTrendLine(List<double> values) {
+    // Calculer la régression linéaire
+    final trend = _calculateLinearRegression(values);
+    final double slope = trend['slope']!;
+    final double intercept = trend['intercept']!;
+
+    // Générer les points pour la ligne de tendance
+    final List<FlSpot> trendSpots = List.generate(values.length, (index) {
+      final double y = slope * index + intercept;
+      return FlSpot(index.toDouble(), y);
+    });
+
+    // Déterminer la couleur de la ligne (rouge pour pente négative, vert pour pente positive)
+    final Color trendColor = slope >= 0
+        ? Colors.green.withOpacity(0.3) // Vert avec opacité encore plus réduite
+        : Colors.red.withOpacity(0.3); // Rouge avec opacité encore plus réduite
+
+    return LineChartBarData(
+      spots: trendSpots,
+      isCurved: false,
+      color: trendColor,
+      barWidth: 2,
+      isStrokeCapRound: true,
+      dotData: const FlDotData(show: false),
+      dashArray: [5, 5], // Ligne pointillée
+    );
+  }
+
+  Map<String, double> _calculateLinearRegression(List<double> values) {
+    final int n = values.length;
+    final List<double> x = List.generate(n, (index) => index.toDouble());
+    final double sumX = x.reduce((a, b) => a + b);
+    final double sumY = values.reduce((a, b) => a + b);
+    final double sumXY = List.generate(n, (index) => x[index] * values[index])
+        .reduce((a, b) => a + b);
+    final double sumX2 = x.map((xi) => xi * xi).reduce((a, b) => a + b);
+
+    final double slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    final double intercept = (sumY - slope * sumX) / n;
+
+    return {'slope': slope, 'intercept': intercept};
   }
 
   double _getMinY(List<double> values) {
