@@ -29,14 +29,6 @@ class DashboardPage extends ConsumerWidget {
     String minHauteur = "-";
     String maxHauteur = "-";
 
-    String dashboardTitle = "Hydrométrie Dashboard";
-    if (selectedStation != null) {
-      final stationName = selectedStation['libelle_station'] ?? "";
-      if (stationName.isNotEmpty) {
-        dashboardTitle += " - $stationName";
-      }
-    }
-
     if (observationsAsync.whenData((data) => data).valueOrNull != null) {
       final allData = observationsAsync.value!;
 
@@ -83,6 +75,14 @@ class DashboardPage extends ConsumerWidget {
     if (dateRange != null) {
       final dateFormat = DateFormat('dd/MM/yyyy');
       periodLabel = " (${dateFormat.format(dateRange.start)} - ${dateFormat.format(dateRange.end)})";
+    }
+
+    String dashboardTitle = "Hydrométrie Dashboard";
+    if (selectedStation != null) {
+      final stationName = selectedStation['libelle_station'] ?? "";
+      if (stationName.isNotEmpty) {
+        dashboardTitle += " - $stationName";
+      }
     }
 
     return Scaffold(

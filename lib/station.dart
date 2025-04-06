@@ -50,7 +50,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
       if (_searchDebounce?.isActive ?? false) {
         _searchDebounce!.cancel();
       }
-      _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      _searchDebounce = Timer(const Duration(milliseconds: 200), () {
         ref.read(searchTextProvider.notifier).state = _searchController.text;
       });
       setState(() {
@@ -64,6 +64,9 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
         end: validEndDate,
       );
       ref.read(searchTextProvider.notifier).state = widget.initialSearchText;
+
+      // Charger la France entière au début
+      _animatedMapMove(latlong2.LatLng(47.0, 2.0), 5); // Zoom adapté pour afficher la France entière
     });
   }
 
@@ -87,6 +90,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
         start: validStartDate,
         end: validEndDate,
       );
+      ref.read(selectedStationProvider.notifier).state = null; // Réinitialiser la station sélectionnée
       _currentPeriod = dp.DatePeriod(validStartDate, validEndDate);
 
       // Recentre la carte sur la France avec un zoom fluide
@@ -165,13 +169,13 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
     );
 
     final controller = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 2000), // Augmenter la durée pour une animation plus lente
       vsync: this,
     );
 
     final animation = CurvedAnimation(
       parent: controller,
-      curve: Curves.easeInOut,
+      curve: Curves.easeInOut, // Courbe fluide pour un style plus agréable
     );
 
     controller.addListener(() {
@@ -191,6 +195,24 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
   Widget build(BuildContext context) {
     final stationSuggestionsAsync = ref.watch(stationSuggestionsProvider);
     final selectedStation = ref.watch(selectedStationProvider);
+
+    // Mise en cache des suggestions
+    final stationSuggestions = stationSuggestionsAsync.when(
+      data: (stations) => stations.cast<Map<String, dynamic>>(),
+      loading: () => <Map<String, dynamic>>[],
+      error: (_, __) => <Map<String, dynamic>>[],
+    );
+
+    // Récupérer les coordonnées de la station sélectionnée
+    latlong2.LatLng? selectedStationCoordinates;
+    if (selectedStation != null &&
+        selectedStation['latitude'] != null &&
+        selectedStation['longitude'] != null) {
+      selectedStationCoordinates = latlong2.LatLng(
+        selectedStation['latitude'],
+        selectedStation['longitude'],
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -216,24 +238,17 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                   textEditingController: _searchController,
                   focusNode: _searchFocusNode,
                   optionsBuilder: (TextEditingValue textEditingValue) {
-                    if (textEditingValue.text.trim().isEmpty) {
-                      return const Iterable<Map<String, dynamic>>.empty();
+                    final query = textEditingValue.text.trim().toLowerCase();
+                    if (query.isEmpty) {
+                      return stationSuggestions;
                     }
-                    return stationSuggestionsAsync.when(
-                      data: (stations) {
-                        final searchText = textEditingValue.text.toLowerCase();
-                        return stations.where((station) {
-                          final stationName = (station['libelle_station'] ?? '').toLowerCase();
-                          return stationName.contains(searchText) || _isSimilar(stationName, searchText);
-                        });
-                      },
-                      loading: () => const [],
-                      error: (_, __) => const [],
-                    );
+                    return stationSuggestions.where((station) {
+                      final stationName = (station['libelle_station'] ?? '').toLowerCase();
+                      return stationName.contains(query) || _isSimilar(stationName, query);
+                    });
                   },
                   displayStringForOption: displayStringForOption,
                   onSelected: (Map<String, dynamic> selection) {
-                    _searchController.text = displayStringForOption(selection);
                     _onStationSelected(selection);
                     FocusScope.of(context).unfocus();
                   },
@@ -265,7 +280,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                   },
                   optionsViewBuilder: (context, onSelected, options) {
                     final RenderBox? renderBox = _fieldKey.currentContext?.findRenderObject() as RenderBox?;
-                    final double fieldWidth = renderBox?.size.width ?? 0; // Récupère la largeur de la barre de recherche
+                    final double fieldWidth = renderBox?.size.width ?? 0;
                     return Align(
                       alignment: Alignment.topLeft,
                       child: Material(
@@ -273,7 +288,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                         borderRadius: BorderRadius.circular(8),
                         color: Colors.white.withOpacity(1),
                         child: Container(
-                          width: fieldWidth, // Ajuste la largeur des suggestions à celle de la barre de recherche
+                          width: fieldWidth,
                           constraints: const BoxConstraints(maxHeight: 300),
                           child: options.isEmpty
                               ? Padding(
@@ -310,17 +325,16 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                 ),
               ),
               const SizedBox(width: 8),
-              // Reset button
               ElevatedButton(
-                onPressed: _resetFilters,
+                onPressed: _resetFilters, // Fusion de la logique de réinitialisation
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey[200], // Gris plus clair
+                  backgroundColor: Colors.grey[200],
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
-                    vertical: 21, // Augmente la hauteur du bouton
+                    vertical: 21,
                   ),
                 ),
                 child: const Icon(
@@ -425,25 +439,34 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                     subdomains: ['a', 'b', 'c', 'd'],
                   ),
                   MarkerLayer(
-                    markers: stationSuggestionsAsync.when(
-                      data: (stations) {
-                        return stations
-                            .where((station) => station['latitude'] != null && station['longitude'] != null)
-                            .map((station) {
-                          final isSelected = ref.watch(selectedStationProvider)?['code_station'] == station['code_station'];
-                          return Marker(
-                            point: latlong2.LatLng(station['latitude'], station['longitude']),
-                            builder: (ctx) => Icon(
-                              Icons.location_on,
-                              color: isSelected ? Colors.blue[800] : Colors.blue,
-                              size: isSelected ? 36.0 : 30.0,
-                            ),
-                          );
-                        }).toList();
-                      },
-                      loading: () => [],
-                      error: (error, stack) => [],
-                    ),
+                    markers: [
+                      // Marqueurs des suggestions
+                      ...stationSuggestions
+                          .where((station) =>
+                              station['latitude'] != null && station['longitude'] != null)
+                          .map((station) {
+                        final isSelected = selectedStation?['code_station'] == station['code_station'];
+                        return Marker(
+                          point: latlong2.LatLng(station['latitude'], station['longitude']),
+                          builder: (ctx) => Icon(
+                            Icons.location_on,
+                            color: isSelected ? Colors.blue[800] : Colors.blue,
+                            size: isSelected ? 36.0 : 30.0,
+                          ),
+                        );
+                      }).toList(),
+
+                      // Marqueur bleu pour la station sélectionnée
+                      if (selectedStationCoordinates != null)
+                        Marker(
+                          point: selectedStationCoordinates,
+                          builder: (ctx) => const Icon(
+                            Icons.location_on,
+                            color: Colors.blue,
+                            size: 40.0,
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),
