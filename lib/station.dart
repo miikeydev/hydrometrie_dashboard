@@ -5,6 +5,7 @@ import 'providers.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latlong2;
 import 'dart:async';
+import 'dart:developer' as developer;
 
 class StationInfoPanel extends ConsumerStatefulWidget {
   final String initialSearchText;
@@ -132,10 +133,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
       if (coordinates is List && coordinates.length == 2) {
         final longitude = coordinates[0];
         final latitude = coordinates[1];
-        debugPrint("Coordonnées de la station sélectionnée :");
-        debugPrint("Nom : $stationName");
-        debugPrint("Longitude : $longitude");
-        debugPrint("Latitude : $latitude");
+        developer.log("Station sélectionnée: $stationName, Latitude: $latitude, Longitude: $longitude", name: 'StationInfoPanel');
 
         // Animation vers la station sur la carte
         _animatedMapMove(latlong2.LatLng(latitude, longitude), 13.0);
