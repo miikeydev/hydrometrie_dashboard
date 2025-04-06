@@ -206,17 +206,6 @@ class HydroLineChart extends StatelessWidget {
     return max > 0 ? max * 1.1 : max * 0.9; // Inclut les valeurs négatives
   }
   
-  double _calculateInterval(List<double> values) {
-    if (values.isEmpty) return 1.0;
-    double min = values.reduce((a, b) => a < b ? a : b);
-    double max = values.reduce((a, b) => a > b ? a : b);
-    double range = max - min;
-    
-    // Choisir un intervalle qui crée environ 5 divisions
-    if (range <= 0) return 1.0;
-    return range / 5;
-  }
-  
   double _calculateStep(List<double> values, int maxSteps) {
     if (values.isEmpty) return 1.0;
     double min = values.reduce((a, b) => a < b ? a : b);

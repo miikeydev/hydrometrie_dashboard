@@ -227,8 +227,12 @@ class DashboardPage extends ConsumerWidget {
                               Expanded(
                                 child: gauge.CircleGaugeCard(
                                   value: debitMoyen,
-                                  min: 0,
-                                  max: debitMoyen * 2 > 0 ? debitMoyen * 2 : 100,
+                                  min: minDebit != "-" && double.tryParse(minDebit.split(" ")[0]) != null 
+                                  ? double.parse(minDebit.split(" ")[0]) 
+                                  : 0, // Utilise la valeur minHauteur
+                              max: maxDebit != "-" && double.tryParse(maxDebit.split(" ")[0]) != null 
+                                  ? double.parse(maxDebit.split(" ")[0]) 
+                                  : (debitMoyen * 2 > 0 ? debitMoyen * 2 : 10), // Utilise la valeur maxHauteur
                                   unit: 'm³/s',
                                   label: 'Moyenne du débit',
                                 ),
@@ -237,10 +241,12 @@ class DashboardPage extends ConsumerWidget {
                               Expanded(
                                 child: gauge.CircleGaugeCard(
                                   value: hauteurMoyenne,
-                                  min: 0,
-                                  max: hauteurMoyenne * 2 > 0
-                                      ? hauteurMoyenne * 2
-                                      : 10,
+                                  min: minHauteur != "-" && double.tryParse(minHauteur.split(" ")[0]) != null 
+                                  ? double.parse(minHauteur.split(" ")[0]) 
+                                  : 0, // Utilise la valeur minHauteur
+                              max: maxHauteur != "-" && double.tryParse(maxHauteur.split(" ")[0]) != null 
+                                  ? double.parse(maxHauteur.split(" ")[0]) 
+                                  : (hauteurMoyenne * 2 > 0 ? hauteurMoyenne * 2 : 10), // Utilise la valeur maxHauteur
                                   unit: 'm',
                                   label: 'Moyenne de hauteur',
                                 ),
