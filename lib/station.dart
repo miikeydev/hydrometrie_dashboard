@@ -25,7 +25,6 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
   final GlobalKey _fieldKey = GlobalKey();
   late dp.DatePeriod _currentPeriod;
   bool _showClearButton = false;
-  DateTime _currentDisplayedMonth = DateTime.now();
 
 
 
@@ -112,7 +111,6 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> {
   );
   setState(() {
     _currentPeriod = todayPeriod;
-    _currentDisplayedMonth = now;
 
   });
   ref.read(dateRangeProvider.notifier).state = DateTimeRange(

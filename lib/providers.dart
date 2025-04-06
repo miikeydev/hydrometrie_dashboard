@@ -123,21 +123,15 @@ final observationsElabProvider =
 
   // Durée en jours
   final nbJours = dateRange.end.difference(dateRange.start).inDays;
-  // Choix: si <= 90 jours => QmnJ, sinon => QmM
+  // Si <= 90 jours, on utilise QmnJ, sinon QmM
   final grandeurElab = nbJours <= 90 ? "QmnJ" : "QmM";
-
-  developer.log(
-    'Récupération obs_elab pour la station: $codeStation avec $grandeurElab',
-    name: 'observationsElabProvider',
-  );
 
   try {
     final dio = Dio();
     final response = await dio.get(
       'https://hubeau.eaufrance.fr/api/v2/hydrometrie/obs_elab',
       queryParameters: {
-        // Choisissez ce que vous voulez réellement envoyer :
-        // 'code_entite': codeSite, // ou codeStation
+        // Vous pouvez choisir d’utiliser codeStation ou codeSite
         'code_entite': codeStation,
         'grandeur_hydro_elab': grandeurElab,
         'date_debut_obs_elab': dateRange.start.toIso8601String(),
@@ -148,33 +142,19 @@ final observationsElabProvider =
 
     final data = response.data['data'] as List<dynamic>;
 
-    // Convertir "date_obs_elab" -> "date_obs"
-    //         "resultat_obs_elab" -> "resultat_obs"
-    // forcer grandeur_hydro="Q" si c'est du débit
+    // Transformation : on renomme date et valeur pour rester cohérent avec l’UI
+    // et on conserve le type de mesure dans "grandeur_mesure"
     final List<Map<String, dynamic>> observations = data.map((item) {
       return {
         'code_station': item['code_station'] ?? codeStation,
         'code_site': item['code_site'] ?? codeSite,
-
-        // On renomme pour rester cohérent avec l’UI
         'date_obs': item['date_obs_elab'],
         'resultat_obs': item['resultat_obs_elab'],
-
-        // Dans obs_elab, c’est QmnJ ou QmM => on force "Q"
+        // Pour l’UI on force "Q", mais on garde en plus le type original
         'grandeur_hydro': 'Q',
-
-        // On peut aussi conserver d’autres champs
-        'longitude': item['longitude'],
-        'latitude': item['latitude'],
-
-        // ... etc. (libelle_statut, date_prod, etc.) si besoin
+        'grandeur_mesure': item['grandeur_hydro_elab'], // "QmM" ou "QmnJ"
       };
     }).toList();
-
-    developer.log(
-      'Nombre total d\'observations ELAB: ${observations.length}',
-      name: 'observationsElabProvider',
-    );
 
     return observations;
   } catch (e, stack) {
@@ -182,6 +162,7 @@ final observationsElabProvider =
     return [];
   }
 });
+
 
 // ---------------------------------------------------------------------
 // 4) Provider COMBINÉ : si la plage <= 30j => on utilise obs_tr
@@ -227,3 +208,4 @@ final hauteurObservationsProvider = Provider<List<Map<String, dynamic>>>((ref) {
     orElse: () => [],
   );
 });
+

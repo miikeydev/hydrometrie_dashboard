@@ -13,8 +13,6 @@ class DashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final observationsAsync = ref.watch(combinedObservationsProvider);
-
-
     final selectedStation = ref.watch(selectedStationProvider);
     final dateRange = ref.watch(dateRangeProvider);
 
@@ -41,41 +39,113 @@ class DashboardPage extends ConsumerWidget {
     if (observationsAsync.whenData((data) => data).valueOrNull != null) {
       final allData = observationsAsync.value!;
 
+      // On extrait les observations de débit et de hauteur
       final debitData = allData.where((obs) => obs['grandeur_hydro'] == 'Q').toList();
       final hauteurData = allData.where((obs) => obs['grandeur_hydro'] == 'H').toList();
 
       developer.log('Données de débit: ${debitData.length} observations', name: 'dashboard');
       developer.log('Données de hauteur: ${hauteurData.length} observations', name: 'dashboard');
 
+      // Traitement des données de débit
       if (debitData.isNotEmpty) {
-        debitData.sort((a, b) => DateTime.parse(a['date_obs']).compareTo(DateTime.parse(b['date_obs'])));
-        xValuesDebitDates = debitData.map<DateTime>((obs) => DateTime.parse(obs['date_obs'])).toList();
-        yValuesDebit = debitData.map<double>((obs) {
-          return (obs['resultat_obs'] is num) ? obs['resultat_obs'].toDouble() : 0.0;
-        }).toList();
+        // Vérifier si une observation mensuelle (type "QmM") est présente
+        bool aMesureMensuelle = debitData.any((obs) => obs['grandeur_mesure'] == 'QmM');
 
-        final debitValues = yValuesDebit.where((value) => !value.isNaN && value >= 0).toList();
-        if (debitValues.isNotEmpty) {
-          debitMoyen = debitValues.reduce((a, b) => a + b) / debitValues.length;
-          final minDebitValue = debitValues.reduce((a, b) => a < b ? a : b);
-          final maxDebitValue = debitValues.reduce((a, b) => a > b ? a : b);
-          minDebit = formatValue(minDebitValue, 'm³/s');
-          maxDebit = formatValue(maxDebitValue, 'm³/s');
+        if (aMesureMensuelle) {
+          // On se base sur la date sélectionnée dans le calendrier (par exemple, dateRange.start)
+          DateTime selectedDate = dateRange.start;
+          // Filtrer les observations mensuelles correspondant au même mois/année que la date sélectionnée
+          final monthlyObs = debitData.where((obs) {
+            DateTime obsDate = DateTime.parse(obs['date_obs']);
+            return (obsDate.year == selectedDate.year) &&
+                   (obsDate.month == selectedDate.month);
+          }).toList();
+
+          if (monthlyObs.isNotEmpty) {
+            // On suppose qu'il y a une seule mesure mensuelle par mois : on en prend la première
+            final monthlyValue = (monthlyObs.first['resultat_obs'] as num).toDouble();
+            debitMoyen = monthlyValue;
+            minDebit = formatValue(monthlyValue, 'm³/s');
+            maxDebit = formatValue(monthlyValue, 'm³/s');
+            // Pour le graphique, on affiche la date et la valeur unique
+            xValuesDebitDates = [DateTime.parse(monthlyObs.first['date_obs'])];
+            yValuesDebit = [monthlyValue];
+          } else {
+            // Si aucune mesure mensuelle n'est trouvée pour ce mois, on calcule la moyenne normalement
+            debitData.sort((a, b) => DateTime.parse(a['date_obs'])
+                .compareTo(DateTime.parse(b['date_obs'])));
+            xValuesDebitDates = debitData
+                .map<DateTime>((obs) => DateTime.parse(obs['date_obs']))
+                .toList();
+            yValuesDebit = debitData.map<double>((obs) {
+              return (obs['resultat_obs'] is num)
+                  ? obs['resultat_obs'].toDouble()
+                  : 0.0;
+            }).toList();
+            final debitValues = yValuesDebit
+                .where((value) => !value.isNaN && value >= 0)
+                .toList();
+            if (debitValues.isNotEmpty) {
+              debitMoyen =
+                  debitValues.reduce((a, b) => a + b) / debitValues.length;
+              final minDebitValue =
+                  debitValues.reduce((a, b) => a < b ? a : b);
+              final maxDebitValue =
+                  debitValues.reduce((a, b) => a > b ? a : b);
+              minDebit = formatValue(minDebitValue, 'm³/s');
+              maxDebit = formatValue(maxDebitValue, 'm³/s');
+            }
+          }
+        } else {
+          // Cas standard pour les données journalières (type "QmnJ" ou provenant d'obs_tr)
+          debitData.sort((a, b) => DateTime.parse(a['date_obs'])
+              .compareTo(DateTime.parse(b['date_obs'])));
+          xValuesDebitDates = debitData
+              .map<DateTime>((obs) => DateTime.parse(obs['date_obs']))
+              .toList();
+          yValuesDebit = debitData.map<double>((obs) {
+            return (obs['resultat_obs'] is num)
+                ? obs['resultat_obs'].toDouble()
+                : 0.0;
+          }).toList();
+          final debitValues = yValuesDebit
+              .where((value) => !value.isNaN && value >= 0)
+              .toList();
+          if (debitValues.isNotEmpty) {
+            debitMoyen =
+                debitValues.reduce((a, b) => a + b) / debitValues.length;
+            final minDebitValue =
+                debitValues.reduce((a, b) => a < b ? a : b);
+            final maxDebitValue =
+                debitValues.reduce((a, b) => a > b ? a : b);
+            minDebit = formatValue(minDebitValue, 'm³/s');
+            maxDebit = formatValue(maxDebitValue, 'm³/s');
+          }
         }
       }
 
+      // Traitement des données de hauteur (inchangé)
       if (hauteurData.isNotEmpty) {
-        hauteurData.sort((a, b) => DateTime.parse(a['date_obs']).compareTo(DateTime.parse(b['date_obs'])));
-        xValuesHauteurDates = hauteurData.map<DateTime>((obs) => DateTime.parse(obs['date_obs'])).toList();
+        hauteurData.sort((a, b) => DateTime.parse(a['date_obs'])
+            .compareTo(DateTime.parse(b['date_obs'])));
+        xValuesHauteurDates = hauteurData
+            .map<DateTime>((obs) => DateTime.parse(obs['date_obs']))
+            .toList();
         yValuesHauteur = hauteurData.map<double>((obs) {
-          return (obs['resultat_obs'] is num) ? obs['resultat_obs'].toDouble() : 0.0;
+          return (obs['resultat_obs'] is num)
+              ? obs['resultat_obs'].toDouble()
+              : 0.0;
         }).toList();
-
-        final hauteurValues = yValuesHauteur.where((value) => !value.isNaN && value >= 0).toList();
+        final hauteurValues = yValuesHauteur
+            .where((value) => !value.isNaN && value >= 0)
+            .toList();
         if (hauteurValues.isNotEmpty) {
-          hauteurMoyenne = hauteurValues.reduce((a, b) => a + b) / hauteurValues.length;
-          final minHauteurValue = hauteurValues.reduce((a, b) => a < b ? a : b);
-          final maxHauteurValue = hauteurValues.reduce((a, b) => a > b ? a : b);
+          hauteurMoyenne =
+              hauteurValues.reduce((a, b) => a + b) / hauteurValues.length;
+          final minHauteurValue =
+              hauteurValues.reduce((a, b) => a < b ? a : b);
+          final maxHauteurValue =
+              hauteurValues.reduce((a, b) => a > b ? a : b);
           minHauteur = formatValue(minHauteurValue, 'm');
           maxHauteur = formatValue(maxHauteurValue, 'm');
         }
@@ -98,7 +168,8 @@ class DashboardPage extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     dashboardTitle,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 24, fontWeight: FontWeight.bold),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -106,13 +177,12 @@ class DashboardPage extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 8),
-
             Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SizedBox(
-                    width: 300, 
+                    width: 300,
                     child: StationInfoPanel(
                       initialDateRange: DateTimeRange(
                         start: DateTime.now().subtract(const Duration(days: 5)),
@@ -121,7 +191,6 @@ class DashboardPage extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-
                   SizedBox(
                     width: 220,
                     child: Column(
@@ -144,7 +213,9 @@ class DashboardPage extends ConsumerWidget {
                                 child: gauge.CircleGaugeCard(
                                   value: hauteurMoyenne,
                                   min: 0,
-                                  max: hauteurMoyenne * 2 > 0 ? hauteurMoyenne * 2 : 10,
+                                  max: hauteurMoyenne * 2 > 0
+                                      ? hauteurMoyenne * 2
+                                      : 10,
                                   unit: 'm',
                                   label: 'Moyenne de hauteur',
                                 ),
@@ -153,7 +224,6 @@ class DashboardPage extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 12),
-
                         Expanded(
                           flex: 3,
                           child: Column(
@@ -203,9 +273,7 @@ class DashboardPage extends ConsumerWidget {
                       ],
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
                   Expanded(
                     child: Column(
                       children: [
