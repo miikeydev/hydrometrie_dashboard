@@ -49,8 +49,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
     
 
     );
-    // Afficher le bouton d'effacement si le texte n'est pas vide
-    _showClearButton = _searchController.text.isNotEmpty;
+
 
     _searchController.addListener(() {
       if (_searchDebounce?.isActive ?? false) {

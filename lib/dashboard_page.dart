@@ -40,8 +40,7 @@ class DashboardPage extends ConsumerWidget {
 
       // Traitement des données de débit
       if (debitData.isNotEmpty) {
-        // Vérifier si une observation mensuelle (type "QmM") est présente
-        bool aMesureMensuelle = debitData.any((obs) => obs['grandeur_mesure'] == 'QmM');
+        
 
 
         if (yValuesDebit.isNotEmpty) {

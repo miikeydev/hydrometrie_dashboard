@@ -33,7 +33,6 @@ final stationSuggestionsProvider =
       'libelle_station': searchText,
       'en_service': 1, // Filtrer uniquement les stations en service
       'size': 100, // Limite à 100 résultats
-      'size': 20,
     },
   );
   final data = response.data['data'] as List<dynamic>;
@@ -71,10 +70,7 @@ Future<bool> _hasStationData(String codeStation, Dio dio) async {
   }
 }
 
-bool _isSimilar(String stationName, String searchText) {
-  // Implémentez ici votre logique de similarité (exemple : distance de Levenshtein)
-  return false; // Remplacez par votre logique
-}
+
 
 // Provider pour récupérer les observations (par exemple, en temps réel) pour la station sélectionnée et la plage de dates
 final observationsProvider =
