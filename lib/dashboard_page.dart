@@ -23,18 +23,10 @@ class DashboardPage extends ConsumerWidget {
 
     double debitMoyen = 0.0;
     double hauteurMoyenne = 0.0;
-    String minDebit = "N/A";
-    String maxDebit = "N/A";
-    String minHauteur = "N/A";
-    String maxHauteur = "N/A";
-
-    String dashboardTitle = "Hydrométrie Dashboard";
-    if (selectedStation != null) {
-      final stationName = selectedStation['libelle_station'] ?? "";
-      if (stationName.isNotEmpty) {
-        dashboardTitle += " - $stationName";
-      }
-    }
+    String minDebit = "-";
+    String maxDebit = "-";
+    String minHauteur = "-";
+    String maxHauteur = "-";
 
     if (observationsAsync.whenData((data) => data).valueOrNull != null) {
       final allData = observationsAsync.value!;
@@ -51,76 +43,14 @@ class DashboardPage extends ConsumerWidget {
         // Vérifier si une observation mensuelle (type "QmM") est présente
         bool aMesureMensuelle = debitData.any((obs) => obs['grandeur_mesure'] == 'QmM');
 
-        if (aMesureMensuelle) {
-          // On se base sur la date sélectionnée dans le calendrier (par exemple, dateRange.start)
-          DateTime selectedDate = dateRange.start;
-          // Filtrer les observations mensuelles correspondant au même mois/année que la date sélectionnée
-          final monthlyObs = debitData.where((obs) {
-            DateTime obsDate = DateTime.parse(obs['date_obs']);
-            return (obsDate.year == selectedDate.year) &&
-                   (obsDate.month == selectedDate.month);
-          }).toList();
 
-          if (monthlyObs.isNotEmpty) {
-            // On suppose qu'il y a une seule mesure mensuelle par mois : on en prend la première
-            final monthlyValue = (monthlyObs.first['resultat_obs'] as num).toDouble();
-            debitMoyen = monthlyValue;
-            minDebit = formatValue(monthlyValue, 'm³/s');
-            maxDebit = formatValue(monthlyValue, 'm³/s');
-            // Pour le graphique, on affiche la date et la valeur unique
-            xValuesDebitDates = [DateTime.parse(monthlyObs.first['date_obs'])];
-            yValuesDebit = [monthlyValue];
-          } else {
-            // Si aucune mesure mensuelle n'est trouvée pour ce mois, on calcule la moyenne normalement
-            debitData.sort((a, b) => DateTime.parse(a['date_obs'])
-                .compareTo(DateTime.parse(b['date_obs'])));
-            xValuesDebitDates = debitData
-                .map<DateTime>((obs) => DateTime.parse(obs['date_obs']))
-                .toList();
-            yValuesDebit = debitData.map<double>((obs) {
-              return (obs['resultat_obs'] is num)
-                  ? obs['resultat_obs'].toDouble()
-                  : 0.0;
-            }).toList();
-            final debitValues = yValuesDebit
-                .where((value) => !value.isNaN && value >= 0)
-                .toList();
-            if (debitValues.isNotEmpty) {
-              debitMoyen =
-                  debitValues.reduce((a, b) => a + b) / debitValues.length;
-              final minDebitValue =
-                  debitValues.reduce((a, b) => a < b ? a : b);
-              final maxDebitValue =
-                  debitValues.reduce((a, b) => a > b ? a : b);
-              minDebit = formatValue(minDebitValue, 'm³/s');
-              maxDebit = formatValue(maxDebitValue, 'm³/s');
-            }
-          }
-        } else {
-          // Cas standard pour les données journalières (type "QmnJ" ou provenant d'obs_tr)
-          debitData.sort((a, b) => DateTime.parse(a['date_obs'])
-              .compareTo(DateTime.parse(b['date_obs'])));
-          xValuesDebitDates = debitData
-              .map<DateTime>((obs) => DateTime.parse(obs['date_obs']))
-              .toList();
-          yValuesDebit = debitData.map<double>((obs) {
-            return (obs['resultat_obs'] is num)
-                ? obs['resultat_obs'].toDouble()
-                : 0.0;
-          }).toList();
-          final debitValues = yValuesDebit
-              .where((value) => !value.isNaN && value >= 0)
-              .toList();
-          if (debitValues.isNotEmpty) {
-            debitMoyen =
-                debitValues.reduce((a, b) => a + b) / debitValues.length;
-            final minDebitValue =
-                debitValues.reduce((a, b) => a < b ? a : b);
-            final maxDebitValue =
-                debitValues.reduce((a, b) => a > b ? a : b);
-            minDebit = formatValue(minDebitValue, 'm³/s');
-            maxDebit = formatValue(maxDebitValue, 'm³/s');
-          }
+        if (yValuesDebit.isNotEmpty) {
+          debitMoyen = yValuesDebit.reduce((a, b) => a + b) / yValuesDebit.length; // Moyenne incluant les négatifs
+          final minDebitValue = yValuesDebit.reduce((a, b) => a < b ? a : b);
+          final maxDebitValue = yValuesDebit.reduce((a, b) => a > b ? a : b);
+          minDebit = formatValue(minDebitValue, 'm³/s');
+          maxDebit = formatValue(maxDebitValue, 'm³/s');
+
         }
       }
 
@@ -136,16 +66,13 @@ class DashboardPage extends ConsumerWidget {
               ? obs['resultat_obs'].toDouble()
               : 0.0;
         }).toList();
-        final hauteurValues = yValuesHauteur
-            .where((value) => !value.isNaN && value >= 0)
-            .toList();
-        if (hauteurValues.isNotEmpty) {
-          hauteurMoyenne =
-              hauteurValues.reduce((a, b) => a + b) / hauteurValues.length;
-          final minHauteurValue =
-              hauteurValues.reduce((a, b) => a < b ? a : b);
-          final maxHauteurValue =
-              hauteurValues.reduce((a, b) => a > b ? a : b);
+
+
+        if (yValuesHauteur.isNotEmpty) {
+          hauteurMoyenne = yValuesHauteur.reduce((a, b) => a + b) / yValuesHauteur.length; // Moyenne incluant les négatifs
+          final minHauteurValue = yValuesHauteur.reduce((a, b) => a < b ? a : b);
+          final maxHauteurValue = yValuesHauteur.reduce((a, b) => a > b ? a : b);
+
           minHauteur = formatValue(minHauteurValue, 'm');
           maxHauteur = formatValue(maxHauteurValue, 'm');
         }
@@ -153,6 +80,14 @@ class DashboardPage extends ConsumerWidget {
     }
 
     String periodLabel = "";
+
+    String dashboardTitle = "Hydrométrie Dashboard";
+    if (selectedStation != null) {
+      final stationName = selectedStation['libelle_station'] ?? "";
+      if (stationName.isNotEmpty) {
+        dashboardTitle += " - $stationName";
+      }
+    }
 
     return Scaffold(
       body: Container(
@@ -182,23 +117,114 @@ class DashboardPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SizedBox(
-                    width: 300,
+
+                    width: 350, // Augmenté de 300 à 350
+
                     child: StationInfoPanel(
                       initialDateRange: DateTimeRange(
                         start: DateTime.now().subtract(const Duration(days: 5)),
                         end: DateTime.now(),
                       ),
+                      firstDate: DateTime.now().subtract(const Duration(days: 30)), // Limite un mois en arrière
+                      lastDate: DateTime.now().add(const Duration(days: 30)), // Limite un mois en avant
+                      maxSelectableDate: DateTime.now(), // Empêche la sélection au-delà de la date actuelle
                     ),
                   ),
-                  const SizedBox(width: 12),
+
+                  const SizedBox(width: 16), // Espacement ajusté
+
                   SizedBox(
-                    width: 220,
+                    width: 300, // Augmenté de 260 à 300
                     child: Column(
                       children: [
                         Expanded(
-                          flex: 5,
+                          flex: 6, // Augmente la proportion de la section KPI
                           child: Column(
                             children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        gradient: LinearGradient(
+                                          colors: calculateTrend(yValuesDebit) > 0
+                                              ? [Colors.green.withOpacity(0.3), Colors.green.withOpacity(0.1)]
+                                              : calculateTrend(yValuesDebit) < 0
+                                                  ? [Colors.red.withOpacity(0.3), Colors.red.withOpacity(0.1)]
+                                                  : [Colors.grey.withOpacity(0.3), Colors.grey.withOpacity(0.1)],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Icon(
+                                            Icons.water_drop,
+                                            color: Colors.black,
+                                            size: 24,
+                                          ),
+                                          calculateTrend(yValuesDebit) != 0
+                                              ? Icon(
+                                                  calculateTrend(yValuesDebit) > 0
+                                                      ? Icons.north_east
+                                                      : Icons.south_east,
+                                                  color: Colors.black,
+                                                  size: 24,
+                                                )
+                                              : const Text(
+                                                  '--',
+                                                  style: TextStyle(color: Colors.black, fontSize: 16),
+                                                ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        gradient: LinearGradient(
+                                          colors: calculateTrend(yValuesHauteur) > 0
+                                              ? [Colors.green.withOpacity(0.3), Colors.green.withOpacity(0.1)]
+                                              : calculateTrend(yValuesHauteur) < 0
+                                                  ? [Colors.red.withOpacity(0.3), Colors.red.withOpacity(0.1)]
+                                                  : [Colors.grey.withOpacity(0.3), Colors.grey.withOpacity(0.1)],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Icon(
+                                            Icons.height,
+                                            color: Colors.black,
+                                            size: 24,
+                                          ),
+                                          calculateTrend(yValuesHauteur) != 0
+                                              ? Icon(
+                                                  calculateTrend(yValuesHauteur) > 0
+                                                      ? Icons.north_east
+                                                      : Icons.south_east,
+                                                  color: Colors.black,
+                                                  size: 24,
+                                                )
+                                              : const Text(
+                                                  '--',
+                                                  style: TextStyle(color: Colors.black, fontSize: 16),
+                                                ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
                               Expanded(
                                 child: gauge.CircleGaugeCard(
                                   value: debitMoyen,
@@ -225,7 +251,7 @@ class DashboardPage extends ConsumerWidget {
                         ),
                         const SizedBox(height: 12),
                         Expanded(
-                          flex: 3,
+                          flex: 4, // Ajuste la proportion des statistiques
                           child: Column(
                             children: [
                               Expanded(
@@ -273,7 +299,11 @@ class DashboardPage extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
+
+
+                  const SizedBox(width: 16), // Espacement ajusté
+
+
                   Expanded(
                     child: Column(
                       children: [
@@ -312,18 +342,21 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
+  double calculateTrend(List<double> values) {
+    if (values.length < 2) return 0.0;
+    return values.last - values.first;
+  }
+
   String formatValue(double value, String unit) {
     String formattedValue;
     if (value.isNaN || value.isInfinite) {
-      return "N/A";
+      return "-";
     } else if (value >= 1000000) {
-      formattedValue = '${(value / 1000000).toStringAsFixed(1)}M';
+      formattedValue = '${(value / 1000000).toStringAsFixed((value % 1000000 == 0) ? 0 : 1)}M';
     } else if (value >= 1000) {
-      formattedValue = '${(value / 1000).toStringAsFixed(1)}k';
-    } else if (value >= 100) {
-      formattedValue = value.toStringAsFixed(0);
-    } else if (value >= 10) {
-      formattedValue = value.toStringAsFixed(1);
+      formattedValue = '${(value / 1000).toStringAsFixed((value % 1000 == 0) ? 0 : 1)}k';
+    } else if (value % 1 == 0) {
+      formattedValue = value.toStringAsFixed(0); // Affiche uniquement la partie entière
     } else {
       formattedValue = value.toStringAsFixed(2);
     }

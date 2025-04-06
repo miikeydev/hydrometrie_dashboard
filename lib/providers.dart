@@ -26,25 +26,57 @@ final selectedStationProvider = StateProvider<Map<String, dynamic>?>((ref) => nu
 final stationSuggestionsProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final searchText = ref.watch(searchTextProvider);
-  if (searchText.isEmpty) {
-    return [];
-  }
   final dio = Dio();
   final response = await dio.get(
     'https://hubeau.eaufrance.fr/api/v2/hydrometrie/referentiel/stations',
     queryParameters: {
       'libelle_station': searchText,
+      'en_service': 1, // Filtrer uniquement les stations en service
+      'size': 100, // Limite à 100 résultats
       'size': 20,
     },
   );
   final data = response.data['data'] as List<dynamic>;
-  return data.map((e) => e as Map<String, dynamic>).toList();
+  final stations = data
+      .map((e) => e as Map<String, dynamic>)
+      .where((station) => station['libelle_station'] != null) // Filtrer les stations valides
+      .toList();
+
+  // Vérification des données pour chaque station
+  final validStations = <Map<String, dynamic>>[];
+  for (final station in stations) {
+    final hasData = await _hasStationData(station['code_station'], dio);
+    if (hasData) {
+      validStations.add(station);
+    }
+  }
+
+  return validStations;
 });
 
-// ---------------------------------------------------------------------
-// 2) Provider pour OBS_TR (temps réel) déjà existant
-//    => Renvoie les observations sur la période choisie (<= 1 mois conseillés)
-// ---------------------------------------------------------------------
+// Fonction pour vérifier si une station a des données de débit ou de hauteur
+Future<bool> _hasStationData(String codeStation, Dio dio) async {
+  try {
+    final response = await dio.get(
+      'https://hubeau.eaufrance.fr/api/v2/hydrometrie/observations_tr',
+      queryParameters: {
+        'code_entite': codeStation,
+        'size': 1, // Vérifie uniquement si au moins une donnée existe
+      },
+    );
+    final data = response.data['data'] as List<dynamic>;
+    return data.isNotEmpty;
+  } catch (e) {
+    return false; // En cas d'erreur, considérer qu'il n'y a pas de données
+  }
+}
+
+bool _isSimilar(String stationName, String searchText) {
+  // Implémentez ici votre logique de similarité (exemple : distance de Levenshtein)
+  return false; // Remplacez par votre logique
+}
+
+// Provider pour récupérer les observations (par exemple, en temps réel) pour la station sélectionnée et la plage de dates
 final observationsProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final station = ref.watch(selectedStationProvider);

@@ -77,8 +77,8 @@ class HydroLineChart extends StatelessWidget {
                       getTitlesWidget: (value, meta) {
                         // Affiche seulement quelques dates clés pour éviter la surcharge
                         if (hasData && value.toInt() >= 0 && value.toInt() < dates.length) {
-                          // Affiche uniquement certaines dates pour éviter la surcharge
-                          if (dates.length <= 5 || value.toInt() % (dates.length ~/ 5) == 0) {
+                          final step = (dates.length / 5).ceil(); // Max 5 valeurs
+                          if (value.toInt() % step == 0) {
                             return Padding(
                               padding: const EdgeInsets.only(top: 10.0),
                               child: Text(
@@ -95,13 +95,17 @@ class HydroLineChart extends StatelessWidget {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      interval: _calculateInterval(values),
                       reservedSize: 45,
                       getTitlesWidget: (value, meta) {
-                        return Text(
-                          _formatValue(value),
-                          style: const TextStyle(fontSize: 10),
-                        );
+                        // Affiche uniquement un nombre limité de valeurs
+                        final step = _calculateStep(values, 4); // Max 4 valeurs
+                        if (value % step == 0) {
+                          return Text(
+                            _formatValue(value),
+                            style: const TextStyle(fontSize: 10),
+                          );
+                        }
+                        return const Text('');
                       },
                     ),
                   ),
@@ -190,16 +194,16 @@ class HydroLineChart extends StatelessWidget {
 
   double _getMinY(List<double> values) {
     if (values.isEmpty) return 0;
-    // Trouver le minimum des valeurs et soustraire un peu pour l'esthétique
+    // Trouver le minimum des valeurs et ajouter une marge pour l'esthétique
     double min = values.reduce((a, b) => a < b ? a : b);
-    return min > 0 ? min * 0.9 : min * 1.1;
+    return min > 0 ? min * 0.9 : min * 1.1; // Inclut les valeurs négatives
   }
 
   double _getMaxY(List<double> values) {
     if (values.isEmpty) return 10;
-    // Trouver le maximum des valeurs et ajouter un peu pour l'esthétique
+    // Trouver le maximum des valeurs et ajouter une marge pour l'esthétique
     double max = values.reduce((a, b) => a > b ? a : b);
-    return max * 1.1;
+    return max > 0 ? max * 1.1 : max * 0.9; // Inclut les valeurs négatives
   }
   
   double _calculateInterval(List<double> values) {
@@ -213,16 +217,24 @@ class HydroLineChart extends StatelessWidget {
     return range / 5;
   }
   
+  double _calculateStep(List<double> values, int maxSteps) {
+    if (values.isEmpty) return 1.0;
+    double min = values.reduce((a, b) => a < b ? a : b);
+    double max = values.reduce((a, b) => a > b ? a : b);
+    double range = max - min;
+
+    if (range <= 0) return 1.0;
+    return (range / maxSteps).ceilToDouble();
+  }
+
   // Formater les valeurs pour les afficher de façon plus lisible (K, M, etc.)
   String _formatValue(double value) {
     if (value >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)}M';
+      return '${(value / 1000000).toStringAsFixed((value % 1000000 == 0) ? 0 : 1)}M';
     } else if (value >= 1000) {
-      return '${(value / 1000).toStringAsFixed(1)}k';
-    } else if (value >= 100) {
-      return value.toStringAsFixed(0);
-    } else if (value >= 10) {
-      return value.toStringAsFixed(1);
+      return '${(value / 1000).toStringAsFixed((value % 1000 == 0) ? 0 : 1)}k';
+    } else if (value % 1 == 0) {
+      return value.toStringAsFixed(0); // Affiche uniquement la partie entière
     } else {
       return value.toStringAsFixed(2);
     }
