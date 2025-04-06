@@ -134,6 +134,90 @@ class DashboardPage extends ConsumerWidget {
                           flex: 6, // Augmente la proportion de la section KPI
                           child: Column(
                             children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        gradient: LinearGradient(
+                                          colors: calculateTrend(yValuesDebit) > 0
+                                              ? [Colors.green.withOpacity(0.3), Colors.green.withOpacity(0.1)]
+                                              : calculateTrend(yValuesDebit) < 0
+                                                  ? [Colors.red.withOpacity(0.3), Colors.red.withOpacity(0.1)]
+                                                  : [Colors.grey.withOpacity(0.3), Colors.grey.withOpacity(0.1)],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Icon(
+                                            Icons.water_drop,
+                                            color: Colors.black,
+                                            size: 24,
+                                          ),
+                                          calculateTrend(yValuesDebit) != 0
+                                              ? Icon(
+                                                  calculateTrend(yValuesDebit) > 0
+                                                      ? Icons.north_east
+                                                      : Icons.south_east,
+                                                  color: Colors.black,
+                                                  size: 24,
+                                                )
+                                              : const Text(
+                                                  '--',
+                                                  style: TextStyle(color: Colors.black, fontSize: 16),
+                                                ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        gradient: LinearGradient(
+                                          colors: calculateTrend(yValuesHauteur) > 0
+                                              ? [Colors.green.withOpacity(0.3), Colors.green.withOpacity(0.1)]
+                                              : calculateTrend(yValuesHauteur) < 0
+                                                  ? [Colors.red.withOpacity(0.3), Colors.red.withOpacity(0.1)]
+                                                  : [Colors.grey.withOpacity(0.3), Colors.grey.withOpacity(0.1)],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Icon(
+                                            Icons.height,
+                                            color: Colors.black,
+                                            size: 24,
+                                          ),
+                                          calculateTrend(yValuesHauteur) != 0
+                                              ? Icon(
+                                                  calculateTrend(yValuesHauteur) > 0
+                                                      ? Icons.north_east
+                                                      : Icons.south_east,
+                                                  color: Colors.black,
+                                                  size: 24,
+                                                )
+                                              : const Text(
+                                                  '--',
+                                                  style: TextStyle(color: Colors.black, fontSize: 16),
+                                                ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
                               Expanded(
                                 child: gauge.CircleGaugeCard(
                                   value: debitMoyen,
@@ -246,6 +330,11 @@ class DashboardPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  double calculateTrend(List<double> values) {
+    if (values.length < 2) return 0.0;
+    return values.last - values.first;
   }
 
   String formatValue(double value, String unit) {
