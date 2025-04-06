@@ -66,8 +66,8 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
       );
       ref.read(searchTextProvider.notifier).state = widget.initialSearchText;
 
-      // Définir la position et le zoom initiaux de la France
-      _animatedMapMove(latlong2.LatLng(47.0, 2.0), 5.0); // Zoom à 5.0 pour la France entière
+      // Charger la France entière au début
+      _animatedMapMove(latlong2.LatLng(47.0, 2.0), 5); // Zoom adapté pour afficher la France entière
     });
   }
 
@@ -95,7 +95,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
       _currentPeriod = dp.DatePeriod(validStartDate, validEndDate);
 
       // Recentre la carte sur la France avec un zoom fluide
-      _animatedMapMove(latlong2.LatLng(47.0, 2.0), 5.0); // Zoom initial à 5.0 pour voir la France entière
+      _animatedMapMove(latlong2.LatLng(47.0, 2.0), 6.0); // Centre de la France avec un zoom par défaut
     });
     _searchFocusNode.requestFocus();
   }
@@ -214,7 +214,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: Colors.white.withOpacity(0.8), // Légèrement transparent
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
@@ -346,7 +346,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
 
           const SizedBox(height: 16),
 
-          // Date range picker
+          // Date range picker - taille fixe
           Text(
             "Plage de dates",
             style: TextStyle(
@@ -357,6 +357,8 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
           ),
           const SizedBox(height: 8),
           Container(
+            height: 250, // Hauteur fixe pour le calendrier
+            width: double.infinity, // Prend toute la largeur disponible
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
@@ -402,7 +404,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
 
           const SizedBox(height: 16),
 
-          // Map
+          // Map - s'agrandit automatiquement
           Text(
             "Carte des stations hydrométriques",
             style: TextStyle(

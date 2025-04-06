@@ -2,11 +2,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 class WaterLevelWidget extends StatefulWidget {
-  final double fillPercent; // Valeur entre 0.0 (vide) et 1.0 (plein)
+  final double fillPercent;
   final double size;
-  final String formattedValue; // Valeur formatée (moyenne)
-  final String percentage; // Pourcentage à afficher
-  final String title; // Ajout d'un paramètre pour le titre
+  final String formattedValue;
+  final String percentage;
+  final String title;
 
   const WaterLevelWidget({
     Key? key,
@@ -14,7 +14,7 @@ class WaterLevelWidget extends StatefulWidget {
     required this.size,
     required this.formattedValue,
     required this.percentage,
-    required this.title, // Rendre le titre obligatoire
+    required this.title,
   }) : super(key: key);
 
   @override
@@ -44,7 +44,7 @@ class _WaterLevelWidgetState extends State<WaterLevelWidget>
     
     _fillAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500), // Animation plus lente
+      duration: const Duration(milliseconds: 1500),
     );
 
     // Initialiser l'animation avec la valeur initiale ou 10% par défaut pour les cas sans données
@@ -52,7 +52,7 @@ class _WaterLevelWidgetState extends State<WaterLevelWidget>
     _fillAnimation = Tween<double>(begin: _prevFillPercent, end: targetFill).animate(
       CurvedAnimation(
         parent: _fillAnimationController,
-        curve: Curves.easeInOut, // Courbe douce
+        curve: Curves.easeInOut,
       ),
     );
     
@@ -113,17 +113,18 @@ class _WaterLevelWidgetState extends State<WaterLevelWidget>
           ),
           child: Stack(
             children: [
-              // Le CustomPaint pour les vagues (toujours présent, même sans données)
+              // Le CustomPaint pour les vagues avec le titre pour identifier le type
               CustomPaint(
                 painter: WaterPainter(
                   fillPercent: _fillAnimation.value,
                   waveValue1: _waveController1.value * 2 * pi,
                   waveValue2: _waveController2.value * 2 * pi,
+                  title: widget.title,
                 ),
                 size: Size(widget.size, widget.size),
               ),
               
-              // Titre au centre gauche - Utiliser le titre fourni
+              // Titre au centre gauche
               Positioned(
                 top: 8,
                 left: 16,
@@ -134,11 +135,11 @@ class _WaterLevelWidgetState extends State<WaterLevelWidget>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    widget.title, // Utiliser le titre fourni plutôt que de le déduire
+                    widget.title,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black, // Changé en noir
+                      color: Colors.black,
                     ),
                   ),
                 ),
@@ -176,11 +177,13 @@ class WaterPainter extends CustomPainter {
   final double fillPercent;
   final double waveValue1;
   final double waveValue2;
+  final String title;
 
   WaterPainter({
     required this.fillPercent,
     required this.waveValue1,
     required this.waveValue2,
+    required this.title,
   });
 
   @override
@@ -220,14 +223,26 @@ class WaterPainter extends CustomPainter {
     // Créons un dégradé mesh en superposition
     final rect = Rect.fromLTWH(0, baseHeight, size.width, size.height - baseHeight);
     
-    // Couleurs des vagues avec dégradés
+    // Couleurs en fonction du type (débit ou hauteur)
+    Color mainColor;
+    Color lightColor;
+    
+    if (title.contains("Q")) { // Pour le débit (Q)
+      mainColor = Color(0xFF1976D2); // Bleu plus foncé
+      lightColor = Color(0xFF2196F3); // Bleu moyennement clair
+    } else { // Pour la hauteur (H)
+      mainColor = Color(0xFF64B5F6); // Bleu plus clair
+      lightColor = Color(0xFFBBDEFB); // Bleu très clair
+    }
+    
+    // Couleurs des vagues avec dégradés adaptés au type
     final paint1 = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          Colors.blue.withOpacity(0.6),
-          Colors.blue.withOpacity(0.8),
+          mainColor.withOpacity(0.6),
+          mainColor.withOpacity(0.8),
         ],
       ).createShader(rect);
 
@@ -236,8 +251,8 @@ class WaterPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          Colors.blue.withOpacity(0.2),
-          Colors.blue.withOpacity(0.4),
+          lightColor.withOpacity(0.2),
+          lightColor.withOpacity(0.4),
         ],
       ).createShader(rect);
 
@@ -255,7 +270,9 @@ class WaterPainter extends CustomPainter {
           colors: [
             Colors.white.withOpacity(0.1),
             Colors.transparent,
-            Colors.white.withOpacity(0.1),
+            title.contains("Q")
+                ? mainColor.withOpacity(0.05) // Teinte spécifique pour débit
+                : lightColor.withOpacity(0.05), // Teinte spécifique pour hauteur
             Colors.transparent,
           ],
           stops: const [0.0, 0.3, 0.6, 1.0],
@@ -271,6 +288,7 @@ class WaterPainter extends CustomPainter {
   bool shouldRepaint(covariant WaterPainter oldDelegate) {
     return oldDelegate.fillPercent != fillPercent ||
         oldDelegate.waveValue1 != waveValue1 ||
-        oldDelegate.waveValue2 != waveValue2;
+        oldDelegate.waveValue2 != waveValue2 ||
+        oldDelegate.title != title;
   }
 }

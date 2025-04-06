@@ -7,7 +7,7 @@ import 'statBox.dart' as statbox;
 import 'graph.dart' as graph;
 import 'dart:developer' as developer;
 import 'package:intl/intl.dart';
-import 'water_level_widget.dart'; // Ajout de cet import
+import 'water_level_widget.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({Key? key}) : super(key: key);
@@ -89,7 +89,7 @@ class DashboardPage extends ConsumerWidget {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          color: Colors.grey[200],
+          color: Colors.grey[200], // Fond de couleur gris clair
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -114,7 +114,7 @@ class DashboardPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SizedBox(
-                    width: 350, // Augmenté de 300 à 350
+                    width: 400, // Augmenté de 350 à 400 pour plus d'espace
                     child: StationInfoPanel(
                       initialDateRange: DateTimeRange(
                         start: DateTime.now().subtract(const Duration(days: 5)),
@@ -169,7 +169,7 @@ class DashboardPage extends ConsumerWidget {
                                                   size: 24,
                                                 )
                                               : const Text(
-                                                  '--',
+                                                  '-', // Remplacement de '--' par '-'
                                                   style: TextStyle(color: Colors.black, fontSize: 16),
                                                 ),
                                         ],
@@ -209,7 +209,7 @@ class DashboardPage extends ConsumerWidget {
                                                   size: 24,
                                                 )
                                               : const Text(
-                                                  '--',
+                                                  '-', // Remplacement de '--' par '-'
                                                   style: TextStyle(color: Colors.black, fontSize: 16),
                                                 ),
                                         ],
@@ -366,7 +366,7 @@ class DashboardPage extends ConsumerWidget {
                         Expanded(
                           flex: 1,
                           child: graph.HydroLineChart(
-                            title: 'Débit (m³/s)$periodLabel',
+                            title: 'Évolution Débit', // Titre simplifié sans dates
                             dates: xValuesDebitDates,
                             values: yValuesDebit,
                             startDate: dateRange.start,
@@ -378,7 +378,7 @@ class DashboardPage extends ConsumerWidget {
                         Expanded(
                           flex: 1,
                           child: graph.HydroLineChart(
-                            title: 'Hauteur (m)$periodLabel',
+                            title: 'Évolution Hauteur', // Titre simplifié sans dates
                             dates: xValuesHauteurDates,
                             values: yValuesHauteur,
                             startDate: dateRange.start,
