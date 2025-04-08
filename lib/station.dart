@@ -30,9 +30,12 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   final GlobalKey _fieldKey = GlobalKey();
-  final MapController _mapController = MapController(); // Initialisation du MapController
+  final MapController _mapController = MapController();
   late dp.DatePeriod _currentPeriod;
   Timer? _searchDebounce;
+
+  /// Variable pour stocker la clé de suggestion précédente
+  String _lastSuggestionsKey = '';
 
   @override
   void initState() {
@@ -43,22 +46,13 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
 
     _currentPeriod = dp.DatePeriod(validStartDate, validEndDate);
     _searchController.text = widget.initialSearchText;
-    _currentPeriod = dp.DatePeriod(
-      widget.initialDateRange.start,
-      widget.initialDateRange.end,
-    
 
-    );
-
-
+    // Listener avec debounce pour effectuer une requête API
     _searchController.addListener(() {
-      if (_searchDebounce?.isActive ?? false) {
-        _searchDebounce!.cancel();
-      }
-      _searchDebounce = Timer(const Duration(milliseconds: 200), () {
-        ref.read(searchTextProvider.notifier).state = _searchController.text;
-      });
-      setState(() {
+      final query = _searchController.text.trim();
+      if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+        ref.read(searchTextProvider.notifier).state = query;
       });
     });
 
@@ -69,8 +63,8 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
       );
       ref.read(searchTextProvider.notifier).state = widget.initialSearchText;
 
-      // Charger la France entière au début
-      _animatedMapMove(latlong2.LatLng(47.0, 2.0), 5); // Zoom adapté pour afficher la France entière
+      // Charger la carte sur la France entière au départ
+      _animatedMapMove(latlong2.LatLng(47.0, 2.0), 5);
     });
   }
 
@@ -94,11 +88,10 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
         start: validStartDate,
         end: validEndDate,
       );
-      ref.read(selectedStationProvider.notifier).state = null; // Réinitialiser la station sélectionnée
+      ref.read(selectedStationProvider.notifier).state = null;
       _currentPeriod = dp.DatePeriod(validStartDate, validEndDate);
 
-      // Recentre la carte sur la France avec un zoom fluide
-      _animatedMapMove(latlong2.LatLng(47.0, 2.0), 6.0); // Centre de la France avec un zoom par défaut
+      _animatedMapMove(latlong2.LatLng(47.0, 2.0), 6.0);
     });
     _searchFocusNode.requestFocus();
   }
@@ -129,7 +122,6 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
       return;
     }
 
-    // Vérifiez si les coordonnées sont disponibles dans l'objet geometry
     final geometry = selection['geometry'];
     if (geometry != null && geometry['coordinates'] != null) {
       final coordinates = geometry['coordinates'];
@@ -141,10 +133,8 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
         debugPrint("Longitude : $longitude");
         debugPrint("Latitude : $latitude");
 
-        // Animation vers la station sur la carte
         _animatedMapMove(latlong2.LatLng(latitude, longitude), 13.0);
 
-        // Mise à jour du provider avec les coordonnées obtenues
         ref.read(selectedStationProvider.notifier).state = {
           ...selection,
           'latitude': latitude,
@@ -173,13 +163,13 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
     );
 
     final controller = AnimationController(
-      duration: const Duration(milliseconds: 2000), // Augmenter la durée pour une animation plus lente
+      duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
 
     final animation = CurvedAnimation(
       parent: controller,
-      curve: Curves.easeInOut, // Courbe fluide pour un style plus agréable
+      curve: Curves.easeInOut,
     );
 
     controller.addListener(() {
@@ -197,15 +187,31 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
 
   @override
   Widget build(BuildContext context) {
+    // Récupérer les suggestions depuis le provider Riverpod
     final stationSuggestionsAsync = ref.watch(stationSuggestionsProvider);
     final selectedStation = ref.watch(selectedStationProvider);
 
-    // Mise en cache des suggestions
     final stationSuggestions = stationSuggestionsAsync.when(
-      data: (stations) => stations.cast<Map<String, dynamic>>(),
+      data: (stations) {
+        print("🧭 Suggestions affichées dans l'UI : ${stations.length}");
+        return stations.cast<Map<String, dynamic>>();
+      },
       loading: () => <Map<String, dynamic>>[],
       error: (_, __) => <Map<String, dynamic>>[],
     );
+
+    // ----- ETAPE 2 : Simuler un changement dans le champ de texte si les suggestions ont changé -----
+    // On crée une clé basée sur la liste actuelle des codes de stations.
+    String newSuggestionsKey = stationSuggestions.map((e) => e['code_station']).join('-');
+    if (_lastSuggestionsKey != newSuggestionsKey) {
+      _lastSuggestionsKey = newSuggestionsKey;
+      // On simule un léger changement dans le TextEditingController pour forcer le rafraîchissement de l'overlay
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final currentText = _searchController.text;
+        _searchController.text = '$currentText '; // Ajout d'un espace
+        _searchController.text = currentText;       // Retour à la valeur d'origine
+      });
+    }
 
     // Récupérer les coordonnées de la station sélectionnée
     latlong2.LatLng? selectedStationCoordinates;
@@ -234,15 +240,21 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Search bar and reset button
+          // Bar de recherche et bouton de réinitialisation
           Row(
             children: [
               Expanded(
                 child: RawAutocomplete<Map<String, dynamic>>(
+                  // ----- ETAPE 3 : Utilisation d'une clé dynamique -----
+                  key: ValueKey(newSuggestionsKey),
                   textEditingController: _searchController,
                   focusNode: _searchFocusNode,
                   optionsBuilder: (TextEditingValue textEditingValue) {
                     final query = textEditingValue.text.trim().toLowerCase();
+                    print("🔍 UI Query: $query");
+                    for (var station in stationSuggestions) {
+                      print("💡 Nom station : ${station['libelle_station']?.toString().toLowerCase()}");
+                    }
                     if (query.isEmpty) {
                       return stationSuggestions;
                     }
@@ -278,12 +290,19 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                         ),
                       ),
                       onChanged: (query) {
-                        ref.read(searchTextProvider.notifier).state = query.trim();
+                        print("➡️ onChanged triggered: $query");
+                        if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
+                        _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+                          final cleaned = query.trim();
+                          print("⏳ Debounce set searchTextProvider: $cleaned");
+                          ref.read(searchTextProvider.notifier).state = cleaned;
+                        });
                       },
                     );
                   },
                   optionsViewBuilder: (context, onSelected, options) {
-                    final RenderBox? renderBox = _fieldKey.currentContext?.findRenderObject() as RenderBox?;
+                    final RenderBox? renderBox =
+                        _fieldKey.currentContext?.findRenderObject() as RenderBox?;
                     final double fieldWidth = renderBox?.size.width ?? 0;
                     return Align(
                       alignment: Alignment.topLeft,
@@ -330,7 +349,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
               ),
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed: _resetFilters, // Fusion de la logique de réinitialisation
+                onPressed: _resetFilters,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[200],
                   shape: RoundedRectangleBorder(
@@ -349,10 +368,8 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
-          // Date range picker
+          // Sélecteur de plage de dates
           Text(
             "Plage de dates",
             style: TextStyle(
@@ -405,10 +422,8 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
               ),
             ),
           ),
-
           const SizedBox(height: 16),
-
-          // Map
+          // Carte
           Text(
             "Carte des stations hydrométriques",
             style: TextStyle(
@@ -421,7 +436,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16), // Rounded corners
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -430,11 +445,11 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                   ),
                 ],
               ),
-              clipBehavior: Clip.antiAlias, // Ensures content respects rounded corners
+              clipBehavior: Clip.antiAlias,
               child: FlutterMap(
-                mapController: _mapController, // Utilisation du MapController initialisé
+                mapController: _mapController,
                 options: MapOptions(
-                  center: latlong2.LatLng(47.0, 2.0), // Center of France
+                  center: latlong2.LatLng(47.0, 2.0),
                   zoom: 6.0,
                 ),
                 children: [
@@ -444,10 +459,10 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                   ),
                   MarkerLayer(
                     markers: [
-                      // Marqueurs des suggestions
                       ...stationSuggestions
                           .where((station) =>
-                              station['latitude'] != null && station['longitude'] != null)
+                              station['latitude'] != null &&
+                              station['longitude'] != null)
                           .map((station) {
                         final isSelected = selectedStation?['code_station'] == station['code_station'];
                         return Marker(
@@ -459,8 +474,6 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                           ),
                         );
                       }).toList(),
-
-                      // Marqueur bleu pour la station sélectionnée
                       if (selectedStationCoordinates != null)
                         Marker(
                           point: selectedStationCoordinates,
@@ -494,7 +507,7 @@ bool _isSimilar(String stationName, String searchText) {
   return distance <= 2;
 }
 
-/// Calcul de la distance de Levenshtein (nombre minimal d'opérations nécessaires pour transformer une chaîne en une autre)
+/// Calcul de la distance de Levenshtein
 int _levenshteinDistance(String s1, String s2) {
   final len1 = s1.length;
   final len2 = s2.length;

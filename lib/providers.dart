@@ -25,7 +25,11 @@ final selectedStationProvider = StateProvider<Map<String, dynamic>?>((ref) => nu
 // Suggestions de stations (référentiel)
 final stationSuggestionsProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+      
+  
   final searchText = ref.watch(searchTextProvider);
+  developer.log("📡 API call déclenchée avec : $searchText", name: "stationSuggestionsProvider");
+
   final dio = Dio();
   final response = await dio.get(
     'https://hubeau.eaufrance.fr/api/v2/hydrometrie/referentiel/stations',
@@ -35,6 +39,8 @@ final stationSuggestionsProvider =
       'size': 100, // Limite à 100 résultats
     },
   );
+  developer.log("📥 Réponse brute : ${response.data['data'].length} résultats", name: "stationSuggestionsProvider");
+
   final data = response.data['data'] as List<dynamic>;
   final stations = data
       .map((e) => e as Map<String, dynamic>)
@@ -49,6 +55,9 @@ final stationSuggestionsProvider =
       validStations.add(station);
     }
   }
+
+  developer.log("✅ Stations valides avec données : ${validStations.length}", name: "stationSuggestionsProvider");
+
 
   return validStations;
 });
