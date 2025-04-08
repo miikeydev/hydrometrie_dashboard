@@ -77,6 +77,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
   }
 
   void _resetFilters() {
+    FocusScope.of(context).unfocus();
     setState(() {
       final today = DateTime.now();
       final validStartDate = today.isBefore(widget.firstDate) ? widget.firstDate : today;
@@ -387,43 +388,44 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
           ),
           const SizedBox(height: 8),
           Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
-            ),
+  decoration: BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(8),
+    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
+  ),
             padding: const EdgeInsets.all(2),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: dp.RangePicker(
-                selectedPeriod: _currentPeriod,
-                onChanged: _onPeriodChanged,
-                firstDate: widget.firstDate,
-                lastDate: widget.lastDate,
-                datePickerStyles: dp.DatePickerRangeStyles(
-                  defaultDateTextStyle: const TextStyle(color: Colors.black),
-                  selectedPeriodStartTextStyle: const TextStyle(color: Colors.white),
-                  selectedPeriodMiddleTextStyle: const TextStyle(color: Colors.white),
-                  selectedPeriodStartDecoration: BoxDecoration(
-                    color: Colors.blue,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      bottomLeft: Radius.circular(16),
+  child: ClipRRect(
+    borderRadius: BorderRadius.circular(8),
+    child: dp.RangePicker(
+      key: ValueKey(_currentPeriod.start), // *** Ajout de la ValueKey
+      selectedPeriod: _currentPeriod,
+      onChanged: _onPeriodChanged,
+      firstDate: widget.firstDate,
+      lastDate: widget.lastDate,
+      datePickerStyles: dp.DatePickerRangeStyles(
+        defaultDateTextStyle: const TextStyle(color: Colors.black),
+        selectedPeriodStartTextStyle: const TextStyle(color: Colors.white),
+        selectedPeriodMiddleTextStyle: const TextStyle(color: Colors.white),
+        selectedPeriodStartDecoration: BoxDecoration(
+          color: Colors.blue,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            bottomLeft: Radius.circular(16),
                     ),
                   ),
                   selectedPeriodMiddleDecoration: BoxDecoration(
-                    color: Colors.blue,
+          color: Colors.blue,
                   ),
                   selectedPeriodLastDecoration: BoxDecoration(
-                    color: Colors.blue,
-                    borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(16),
-                      bottomRight: Radius.circular(16),
+          color: Colors.blue,
+          borderRadius: const BorderRadius.only(
+            topRight: Radius.circular(16),
+            bottomRight: Radius.circular(16),
                     ),
                   ),
                   selectedSingleDateDecoration: BoxDecoration(
-                    color: Colors.blue,
-                    shape: BoxShape.circle,
+          color: Colors.blue,
+          shape: BoxShape.circle,
                   ),
                 ),
               ),
