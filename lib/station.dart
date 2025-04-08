@@ -208,8 +208,15 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
       // On simule un léger changement dans le TextEditingController pour forcer le rafraîchissement de l'overlay
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final currentText = _searchController.text;
-        _searchController.text = '$currentText '; // Ajout d'un espace
-        _searchController.text = currentText;       // Retour à la valeur d'origine
+        _searchController.value = TextEditingValue(
+          text: '$currentText ',
+    selection: TextSelection.collapsed(offset: currentText.length + 1),
+  );
+  _searchController.value = TextEditingValue(
+    text: currentText,
+    selection: TextSelection.collapsed(offset: currentText.length),
+    );
+     // Retour à la valeur d'origine
       });
     }
 
