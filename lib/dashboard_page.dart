@@ -7,6 +7,7 @@ import 'statBox.dart' as statbox;
 import 'graph.dart' as graph;
 import 'dart:developer' as developer;
 import 'package:intl/intl.dart';
+import 'water_level_widget.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({Key? key}) : super(key: key);
@@ -88,7 +89,7 @@ class DashboardPage extends ConsumerWidget {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          color: Colors.grey[200],
+          color: Colors.grey[200], // Fond de couleur gris clair
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -113,7 +114,7 @@ class DashboardPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SizedBox(
-                    width: 350, // Augmenté de 300 à 350
+                    width: 400, // Augmenté de 350 à 400 pour plus d'espace
                     child: StationInfoPanel(
                       initialDateRange: DateTimeRange(
                         start: DateTime.now().subtract(const Duration(days: 5)),
@@ -168,7 +169,7 @@ class DashboardPage extends ConsumerWidget {
                                                   size: 24,
                                                 )
                                               : const Text(
-                                                  '--',
+                                                  '-', // Remplacement de '--' par '-'
                                                   style: TextStyle(color: Colors.black, fontSize: 16),
                                                 ),
                                         ],
@@ -208,7 +209,7 @@ class DashboardPage extends ConsumerWidget {
                                                   size: 24,
                                                 )
                                               : const Text(
-                                                  '--',
+                                                  '-', // Remplacement de '--' par '-'
                                                   style: TextStyle(color: Colors.black, fontSize: 16),
                                                 ),
                                         ],
@@ -219,22 +220,87 @@ class DashboardPage extends ConsumerWidget {
                               ),
                               const SizedBox(height: 12),
                               Expanded(
-                                child: gauge.CircleGaugeCard(
-                                  value: debitMoyen,
-                                  min: 0,
-                                  max: debitMoyen * 2 > 0 ? debitMoyen * 2 : 100,
-                                  unit: 'm³/s',
-                                  label: 'Moyenne du débit',
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Expanded(
-                                child: gauge.CircleGaugeCard(
-                                  value: hauteurMoyenne,
-                                  min: 0,
-                                  max: hauteurMoyenne * 2 > 0 ? hauteurMoyenne * 2 : 10,
-                                  unit: 'm',
-                                  label: 'Moyenne de hauteur',
+                                child: Column(
+                                  children: [
+                                    Expanded(
+                                      child: WaterLevelWidget(
+                                        // Toujours montrer au moins 10% de remplissage pour les cas sans données
+                                        fillPercent: (debitMoyen > 0 && _isValidDouble(minDebit) && _isValidDouble(maxDebit))
+                                            ? (() {
+                                                try {
+                                                  final minVal = _extractNumericValue(minDebit);
+                                                  final maxVal = _extractNumericValue(maxDebit);
+                                                  
+                                                  // Si min et max sont égaux, utiliser une position fixe (50%)
+                                                  if (maxVal == minVal) return 0.5;
+                                                  
+                                                  // Calcul du pourcentage comme position relative entre min et max
+                                                  return ((debitMoyen - minVal) / (maxVal - minVal)).clamp(0.0, 1.0);
+                                                } catch (e) {
+                                                  return 0.1; // 10% par défaut en cas d'erreur
+                                                }
+                                              })()
+                                            : 0.1, // 10% pour les cas sans données
+                                        size: double.infinity,
+                                        formattedValue: debitMoyen > 0 ? formatValue(debitMoyen, 'm³/s') : 'N/A',
+                                        percentage: (debitMoyen > 0 && _isValidDouble(minDebit) && _isValidDouble(maxDebit)) 
+                                            ? (() {
+                                                try {
+                                                  final minVal = _extractNumericValue(minDebit);
+                                                  final maxVal = _extractNumericValue(maxDebit);
+                                                  
+                                                  if (maxVal == minVal) return "50%";
+                                                  
+                                                  final percentValue = ((debitMoyen - minVal) / (maxVal - minVal) * 100).clamp(0.0, 100.0);
+                                                  return "${percentValue.toStringAsFixed(0)}%";
+                                                } catch (e) {
+                                                  return "-%";
+                                                }
+                                              })()
+                                            : "--%",
+                                        title: "Moyenne Q", // Titre spécifique pour le widget du débit
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Expanded(
+                                      child: WaterLevelWidget(
+                                        fillPercent: (hauteurMoyenne > 0 && _isValidDouble(minHauteur) && _isValidDouble(maxHauteur))
+                                            ? (() {
+                                                try {
+                                                  final minVal = _extractNumericValue(minHauteur);
+                                                  final maxVal = _extractNumericValue(maxHauteur);
+                                                  
+                                                  // Si min et max sont égaux, utiliser une position fixe (50%)
+                                                  if (maxVal == minVal) return 0.5;
+                                                  
+                                                  // Calcul du pourcentage comme position relative entre min et max
+                                                  return ((hauteurMoyenne - minVal) / (maxVal - minVal)).clamp(0.0, 1.0);
+                                                } catch (e) {
+                                                  return 0.1; // 10% par défaut en cas d'erreur
+                                                }
+                                              })()
+                                            : 0.1, // 10% pour les cas sans données
+                                        size: double.infinity,
+                                        formattedValue: hauteurMoyenne > 0 ? formatValue(hauteurMoyenne, 'm') : 'N/A',
+                                        percentage: (hauteurMoyenne > 0 && _isValidDouble(minHauteur) && _isValidDouble(maxHauteur))
+                                            ? (() {
+                                                try {
+                                                  final minVal = _extractNumericValue(minHauteur);
+                                                  final maxVal = _extractNumericValue(maxHauteur);
+                                                  
+                                                  if (maxVal == minVal) return "50%";
+                                                  
+                                                  final percentValue = ((hauteurMoyenne - minVal) / (maxVal - minVal) * 100).clamp(0.0, 100.0);
+                                                  return "${percentValue.toStringAsFixed(0)}%";
+                                                } catch (e) {
+                                                  return "-%";
+                                                }
+                                              })()
+                                            : "--%",
+                                        title: "Moyenne H", // Titre spécifique pour le widget de la hauteur
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -300,7 +366,7 @@ class DashboardPage extends ConsumerWidget {
                         Expanded(
                           flex: 1,
                           child: graph.HydroLineChart(
-                            title: 'Débit (m³/s)$periodLabel',
+                            title: 'Évolution Débit', // Titre simplifié sans dates
                             dates: xValuesDebitDates,
                             values: yValuesDebit,
                             startDate: dateRange.start,
@@ -312,7 +378,7 @@ class DashboardPage extends ConsumerWidget {
                         Expanded(
                           flex: 1,
                           child: graph.HydroLineChart(
-                            title: 'Hauteur (m)$periodLabel',
+                            title: 'Évolution Hauteur', // Titre simplifié sans dates
                             dates: xValuesHauteurDates,
                             values: yValuesHauteur,
                             startDate: dateRange.start,
@@ -351,5 +417,55 @@ class DashboardPage extends ConsumerWidget {
       formattedValue = value.toStringAsFixed(2);
     }
     return '$formattedValue $unit';
+  }
+
+  bool _isValidDouble(String value) {
+    if (value == "-") return false;
+    try {
+      // Gestion des formats avec k et M
+      String numStr = value.split(' ')[0];
+      
+      // Remplacer les virgules par des points si nécessaire
+      numStr = numStr.replaceAll(',', '.');
+      
+      // Gérer les suffixes k et M
+      if (numStr.contains('k') || numStr.contains('K')) {
+        numStr = numStr.replaceAll('k', '').replaceAll('K', '');
+        double baseValue = double.parse(numStr);
+        return baseValue * 1000 > 0; // Vérifier que la valeur est positive
+      } 
+      else if (numStr.contains('m') || numStr.contains('M')) {
+        numStr = numStr.replaceAll('m', '').replaceAll('M', '');
+        double baseValue = double.parse(numStr);
+        return baseValue * 1000000 > 0; // Vérifier que la valeur est positive
+      }
+      
+      // Cas standard
+      return double.parse(numStr) > 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  double _extractNumericValue(String formattedValue) {
+    if (formattedValue == "-") return 0.0;
+    
+    // Extraire la partie numérique (avant l'unité)
+    String numericPart = formattedValue.split(' ')[0].trim();
+    
+    // Gérer le cas des milliers (k)
+    if (numericPart.contains('k') || numericPart.contains('K')) {
+      numericPart = numericPart.replaceAll('k', '').replaceAll('K', '');
+      return double.parse(numericPart) * 1000;
+    }
+    
+    // Gérer le cas des millions (M)
+    if (numericPart.contains('M')) {
+      numericPart = numericPart.replaceAll('M', '');
+      return double.parse(numericPart) * 1000000;
+    }
+    
+    // Cas de base - juste un nombre
+    return double.parse(numericPart);
   }
 }

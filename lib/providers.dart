@@ -9,10 +9,12 @@ final searchTextProvider = StateProvider<String>((ref) => "");
 
 // Provider pour la plage de dates
 final dateRangeProvider = StateProvider<DateTimeRange>((ref) {
-  return DateTimeRange(
+  final range = DateTimeRange(
     start: DateTime.now().subtract(const Duration(days: 5)),
     end: DateTime.now(),
   );
+  developer.log('Plage de dates initiale: ${range.start} - ${range.end}', name: 'DateRangeProvider');
+  return range;
 });
 
 // Provider pour stocker la station sélectionnée (on stocke ici toute la Map renvoyée par l'API)
