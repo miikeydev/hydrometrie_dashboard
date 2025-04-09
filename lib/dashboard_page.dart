@@ -42,8 +42,19 @@ class DashboardPage extends ConsumerWidget {
 
       // Traitement des données de débit
       if (debitData.isNotEmpty) {
-        
-
+        // Tri des données par date
+        debitData.sort((a, b) => DateTime.parse(a['date_obs'])
+            .compareTo(DateTime.parse(b['date_obs'])));
+            
+        // Extraction des dates et des valeurs de débit
+        xValuesDebitDates = debitData
+            .map<DateTime>((obs) => DateTime.parse(obs['date_obs']))
+            .toList();
+        yValuesDebit = debitData.map<double>((obs) {
+          return (obs['resultat_obs'] is num)
+              ? obs['resultat_obs'].toDouble()
+              : 0.0;
+        }).toList();
 
         if (yValuesDebit.isNotEmpty) {
           debitMoyen = yValuesDebit.reduce((a, b) => a + b) / yValuesDebit.length; // Moyenne incluant les négatifs
@@ -51,7 +62,6 @@ class DashboardPage extends ConsumerWidget {
           final maxDebitValue = yValuesDebit.reduce((a, b) => a > b ? a : b);
           minDebit = formatValue(minDebitValue, 'm³/s');
           maxDebit = formatValue(maxDebitValue, 'm³/s');
-
         }
       }
 
@@ -440,16 +450,16 @@ class DashboardPage extends ConsumerWidget {
       if (numStr.contains('k') || numStr.contains('K')) {
         numStr = numStr.replaceAll('k', '').replaceAll('K', '');
         double baseValue = double.parse(numStr);
-        return baseValue * 1000 > 0; // Vérifier que la valeur est positive
+        return baseValue * 1000 != 0; // On vérifie seulement que la valeur n'est pas zéro
       } 
       else if (numStr.contains('m') || numStr.contains('M')) {
         numStr = numStr.replaceAll('m', '').replaceAll('M', '');
         double baseValue = double.parse(numStr);
-        return baseValue * 1000000 > 0; // Vérifier que la valeur est positive
+        return baseValue * 1000000 != 0; // On vérifie seulement que la valeur n'est pas zéro
       }
       
-      // Cas standard
-      return double.parse(numStr) > 0;
+      // Cas standard - accepter les valeurs négatives
+      return double.parse(numStr) != 0; // On vérifie seulement que la valeur n'est pas zéro
     } catch (e) {
       return false;
     }
@@ -461,19 +471,30 @@ class DashboardPage extends ConsumerWidget {
     // Extraire la partie numérique (avant l'unité)
     String numericPart = formattedValue.split(' ')[0].trim();
     
+    // Traiter le signe négatif explicitement
+    bool isNegative = numericPart.startsWith('-');
+    if (isNegative) {
+      numericPart = numericPart.substring(1); // Enlever le signe négatif pour le traitement
+    }
+    
+    double value = 0.0;
+    
     // Gérer le cas des milliers (k)
     if (numericPart.contains('k') || numericPart.contains('K')) {
       numericPart = numericPart.replaceAll('k', '').replaceAll('K', '');
-      return double.parse(numericPart) * 1000;
+      value = double.parse(numericPart) * 1000;
     }
-    
     // Gérer le cas des millions (M)
-    if (numericPart.contains('M')) {
+    else if (numericPart.contains('M')) {
       numericPart = numericPart.replaceAll('M', '');
-      return double.parse(numericPart) * 1000000;
+      value = double.parse(numericPart) * 1000000;
+    }
+    // Cas de base - juste un nombre
+    else {
+      value = double.parse(numericPart);
     }
     
-    // Cas de base - juste un nombre
-    return double.parse(numericPart);
+    // Réappliquer le signe négatif si nécessaire
+    return isNegative ? -value : value;
   }
 }
