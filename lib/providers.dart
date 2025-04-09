@@ -68,11 +68,6 @@ Future<bool> _hasStationData(String codeStation, Dio dio) async {
   }
 }
 
-bool _isSimilar(String stationName, String searchText) {
-  // Implémentez ici votre logique de similarité (exemple : distance de Levenshtein)
-  return false; // Remplacez par votre logique
-}
-
 // Provider pour récupérer les observations (par exemple, en temps réel) pour la station sélectionnée et la plage de dates
 final observationsProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {

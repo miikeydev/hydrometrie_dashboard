@@ -33,18 +33,17 @@ class DashboardPage extends ConsumerWidget {
     if (observationsAsync.whenData((data) => data).valueOrNull != null) {
       final allData = observationsAsync.value!;
 
+      // On extrait les observations de débit et de hauteur
       final debitData = allData.where((obs) => obs['grandeur_hydro'] == 'Q').toList();
       final hauteurData = allData.where((obs) => obs['grandeur_hydro'] == 'H').toList();
 
       developer.log('Données de débit: ${debitData.length} observations', name: 'dashboard');
       developer.log('Données de hauteur: ${hauteurData.length} observations', name: 'dashboard');
 
+      // Traitement des données de débit
       if (debitData.isNotEmpty) {
-        debitData.sort((a, b) => DateTime.parse(a['date_obs']).compareTo(DateTime.parse(b['date_obs'])));
-        xValuesDebitDates = debitData.map<DateTime>((obs) => DateTime.parse(obs['date_obs'])).toList();
-        yValuesDebit = debitData.map<double>((obs) {
-          return (obs['resultat_obs'] is num) ? obs['resultat_obs'].toDouble() : 0.0;
-        }).toList();
+        
+
 
         if (yValuesDebit.isNotEmpty) {
           debitMoyen = yValuesDebit.reduce((a, b) => a + b) / yValuesDebit.length; // Moyenne incluant les négatifs
@@ -52,20 +51,29 @@ class DashboardPage extends ConsumerWidget {
           final maxDebitValue = yValuesDebit.reduce((a, b) => a > b ? a : b);
           minDebit = formatValue(minDebitValue, 'm³/s');
           maxDebit = formatValue(maxDebitValue, 'm³/s');
+
         }
       }
 
+      // Traitement des données de hauteur (inchangé)
       if (hauteurData.isNotEmpty) {
-        hauteurData.sort((a, b) => DateTime.parse(a['date_obs']).compareTo(DateTime.parse(b['date_obs'])));
-        xValuesHauteurDates = hauteurData.map<DateTime>((obs) => DateTime.parse(obs['date_obs'])).toList();
+        hauteurData.sort((a, b) => DateTime.parse(a['date_obs'])
+            .compareTo(DateTime.parse(b['date_obs'])));
+        xValuesHauteurDates = hauteurData
+            .map<DateTime>((obs) => DateTime.parse(obs['date_obs']))
+            .toList();
         yValuesHauteur = hauteurData.map<double>((obs) {
-          return (obs['resultat_obs'] is num) ? obs['resultat_obs'].toDouble() : 0.0;
+          return (obs['resultat_obs'] is num)
+              ? obs['resultat_obs'].toDouble()
+              : 0.0;
         }).toList();
+
 
         if (yValuesHauteur.isNotEmpty) {
           hauteurMoyenne = yValuesHauteur.reduce((a, b) => a + b) / yValuesHauteur.length; // Moyenne incluant les négatifs
           final minHauteurValue = yValuesHauteur.reduce((a, b) => a < b ? a : b);
           final maxHauteurValue = yValuesHauteur.reduce((a, b) => a > b ? a : b);
+
           minHauteur = formatValue(minHauteurValue, 'm');
           maxHauteur = formatValue(maxHauteurValue, 'm');
         }
@@ -73,10 +81,6 @@ class DashboardPage extends ConsumerWidget {
     }
 
     String periodLabel = "";
-    if (dateRange != null) {
-      final dateFormat = DateFormat('dd/MM/yyyy');
-      periodLabel = " (${dateFormat.format(dateRange.start)} - ${dateFormat.format(dateRange.end)})";
-    }
 
     String dashboardTitle = "Hydrométrie Dashboard";
     if (selectedStation != null) {
@@ -100,7 +104,8 @@ class DashboardPage extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     dashboardTitle,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 24, fontWeight: FontWeight.bold),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -108,13 +113,14 @@ class DashboardPage extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 8),
-
             Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SizedBox(
+
                     width: 400, // Augmenté de 350 à 400 pour plus d'espace
+
                     child: StationInfoPanel(
                       initialDateRange: DateTimeRange(
                         start: DateTime.now().subtract(const Duration(days: 5)),
@@ -125,6 +131,7 @@ class DashboardPage extends ConsumerWidget {
                       maxSelectableDate: DateTime.now(), // Empêche la sélection au-delà de la date actuelle
                     ),
                   ),
+
                   const SizedBox(width: 16), // Espacement ajusté
 
                   SizedBox(
@@ -307,7 +314,6 @@ class DashboardPage extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 12),
-
                         Expanded(
                           flex: 4, // Ajuste la proportion des statistiques
                           child: Column(
@@ -358,7 +364,9 @@ class DashboardPage extends ConsumerWidget {
                     ),
                   ),
 
+
                   const SizedBox(width: 16), // Espacement ajusté
+
 
                   Expanded(
                     child: Column(
