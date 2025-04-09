@@ -13,10 +13,12 @@ final searchTextProvider = StateProvider<String>((ref) => "");
 
 // Plage de dates sélectionnée
 final dateRangeProvider = StateProvider<DateTimeRange>((ref) {
-  return DateTimeRange(
+  final range = DateTimeRange(
     start: DateTime.now().subtract(const Duration(days: 5)),
     end: DateTime.now(),
   );
+  developer.log('Plage de dates initiale: ${range.start} - ${range.end}', name: 'DateRangeProvider');
+  return range;
 });
 
 // Station sélectionnée (on stocke tout l'objet JSON)

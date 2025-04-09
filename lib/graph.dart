@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
-class HydroLineChart extends StatelessWidget {
+class HydroLineChart extends StatefulWidget {
   final String title;
   final List<DateTime> dates;
   final List<double> values;
@@ -21,27 +21,43 @@ class HydroLineChart extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    // Pour éviter les erreurs quand il n'y a pas de données
-    final bool hasData = dates.isNotEmpty && values.isNotEmpty && dates.length == values.length;
+  _HydroLineChartState createState() => _HydroLineChartState();
+}
 
-    // Créer un format pour l'affichage des dates
-    final dateFormat = DateFormat('dd/MM HH:mm');
-    
-    // Couleurs différentes selon le type de graphique
-    final Color mainColor = isHeightChart 
-        ? Color(0xFF64B5F6) // Bleu plus clair pour hauteur
-        : Color(0xFF1976D2); // Bleu plus foncé pour débit
-    
-    final Color gradientColor = isHeightChart
-        ? Color(0xFFBBDEFB).withOpacity(0.5) // Très clair pour hauteur
-        : Color(0xFF2196F3).withOpacity(0.5); // Moyennement clair pour débit
+class _HydroLineChartState extends State<HydroLineChart>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _loadingController;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadingController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _loadingController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasData = widget.dates.isNotEmpty &&
+        widget.values.isNotEmpty &&
+        widget.dates.length == widget.values.length;
+
+    final Color mainColor = widget.isHeightChart
+        ? const Color(0xFF64B5F6) // Bleu plus clair pour hauteur
+        : const Color(0xFF1976D2); // Bleu plus foncé pour débit;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12), // Uniformisation du radius
         boxShadow: const [
           BoxShadow(
             color: Colors.black12,
@@ -54,7 +70,7 @@ class HydroLineChart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            title,
+            widget.isHeightChart ? "Évolution Hauteur d'eau" : "Évolution Débit",
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -63,149 +79,249 @@ class HydroLineChart extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: hasData ? LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: false, // Suppression de la grille
-                ),
-                titlesData: FlTitlesData(
-                  show: true,
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 30,
-                      getTitlesWidget: (value, meta) {
-                        // Affiche seulement quelques dates clés pour éviter la surcharge
-                        if (hasData && value.toInt() >= 0 && value.toInt() < dates.length) {
-                          final step = (dates.length / 5).ceil(); // Max 5 valeurs
-                          if (value.toInt() % step == 0) {
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 10.0),
-                              child: Text(
-                                dateFormat.format(dates[value.toInt()]),
-                                style: const TextStyle(fontSize: 10),
-                              ),
-                            );
-                          }
-                        }
-                        return const Text('');
-                      },
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 45,
-                      getTitlesWidget: (value, meta) {
-                        // Affiche uniquement un nombre limité de valeurs
-                        final step = _calculateStep(values, 4); // Max 4 valeurs
-                        if (value % step == 0) {
-                          return Text(
-                            _formatValue(value),
-                            style: const TextStyle(fontSize: 10),
+            child: hasData
+                ? LineChart(
+                    LineChartData(
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: true,
+                        drawHorizontalLine: true,
+                        getDrawingHorizontalLine: (value) {
+                          return FlLine(
+                            color: Colors.grey.shade300.withOpacity(0.5),
+                            strokeWidth: 1,
                           );
-                        }
-                        return const Text('');
-                      },
+                        },
+                        getDrawingVerticalLine: (value) {
+                          return FlLine(
+                            color: Colors.grey.shade300.withOpacity(0.5),
+                            strokeWidth: 1,
+                          );
+                        },
+                      ),
+                      titlesData: FlTitlesData(
+                        show: true,
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 30,
+                            getTitlesWidget: (value, meta) {
+                              if (hasData &&
+                                  value.toInt() >= 0 &&
+                                  value.toInt() < widget.dates.length) {
+                                final step =
+                                    (widget.dates.length / 5).ceil();
+                                if (value.toInt() % step == 0) {
+                                  return Padding(
+                                    padding:
+                                        const EdgeInsets.only(top: 10.0),
+                                    child: Text(
+                                      DateFormat('dd/MM HH:mm').format(
+                                          widget.dates[value.toInt()]),
+                                      style: const TextStyle(fontSize: 10),
+                                    ),
+                                  );
+                                }
+                              }
+                              return const Text('');
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 45,
+                            getTitlesWidget: (value, meta) {
+                              if (hasData) {
+                                final minY = _getMinY(widget.values);
+                                final maxY = _getMaxY(widget.values);
+                                final range = maxY - minY;
+                                final step = range / 4;
+
+                                for (int i = 0; i <= 4; i++) {
+                                  final checkValue = minY + i * step;
+                                  if ((value - checkValue).abs() < step / 10) {
+                                    return Text(
+                                      _formatValue(value),
+                                      style: const TextStyle(fontSize: 10),
+                                    );
+                                  }
+                                }
+                              }
+                              return const Text('');
+                            },
+                          ),
+                        ),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                      ),
+                      borderData: FlBorderData(
+                        show: true,
+                        border: Border.all(
+                            color: Colors.grey.shade300.withOpacity(0.5)),
+                      ),
+                      minX: 0,
+                      maxX: hasData
+                          ? (widget.dates.length - 1).toDouble()
+                          : 10,
+                      minY: hasData ? _getMinY(widget.values) : 0,
+                      maxY: hasData ? _getMaxY(widget.values) : 10,
+                      lineBarsData: [
+                        // Ligne principale
+                        LineChartBarData(
+                          spots: hasData
+                              ? List.generate(widget.dates.length, (index) {
+                                  return FlSpot(index.toDouble(),
+                                      widget.values[index]);
+                                })
+                              : [
+                                  const FlSpot(0, 0),
+                                  const FlSpot(1, 1)
+                                ],
+                          isCurved: true,
+                          color: mainColor,
+                          barWidth: 3,
+                          isStrokeCapRound: true,
+                          dotData: const FlDotData(
+                            show: false,
+                          ),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            gradient: LinearGradient(
+                              colors: [
+                                mainColor.withOpacity(0.5),
+                                mainColor.withOpacity(0.1),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                        ),
+                        // Ligne de tendance
+                        if (hasData)
+                          _buildTrendLine(widget.values),
+                      ],
+                      lineTouchData: LineTouchData(
+                        enabled: true,
+                        touchTooltipData: LineTouchTooltipData(
+                          fitInsideHorizontally: true,
+                          fitInsideVertically: true,
+                          getTooltipColor: (_) =>
+                              mainColor.withOpacity(0.8),
+                          getTooltipItems:
+                              (List<LineBarSpot> touchedSpots) {
+                            return touchedSpots.map((spot) {
+                              final int index = spot.x.toInt();
+                              if (hasData &&
+                                  index >= 0 &&
+                                  index < widget.dates.length) {
+                                final DateTime date =
+                                    widget.dates[index];
+                                final double value =
+                                    widget.values[index];
+                                return LineTooltipItem(
+                                  '${DateFormat('dd/MM HH:mm').format(date)}\n${_formatValueWithUnit(value, widget.isHeightChart)}',
+                                  const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                );
+                              } else {
+                                return const LineTooltipItem(
+                                    '', TextStyle());
+                              }
+                            }).toList();
+                          },
+                        ),
+                        handleBuiltInTouches: true,
+                      ),
                     ),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                minX: 0,
-                maxX: hasData ? (dates.length - 1).toDouble() : 10,
-                minY: hasData ? _getMinY(values) : 0,
-                maxY: hasData ? _getMaxY(values) : 10,
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: hasData
-                        ? List.generate(dates.length, (index) {
-                            return FlSpot(index.toDouble(), values[index]);
-                          })
-                        : [const FlSpot(0, 0), const FlSpot(1, 1)],
-                    isCurved: true,
-                    color: mainColor,
-                    barWidth: 3,
-                    isStrokeCapRound: true,
-                    dotData: const FlDotData(
-                      show: false,
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      // Un dégradé du bleu vers transparent
-                      gradient: LinearGradient(
-                        colors: [
-                          gradientColor,
-                          gradientColor.withOpacity(0.1),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+                  )
+                : Center(
+                    child: Text(
+                      "En attente des données...", // Message simple
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
-                ],
-                lineTouchData: LineTouchData(
-                  enabled: true,
-                  touchTooltipData: LineTouchTooltipData(
-                    fitInsideHorizontally: true,
-                    fitInsideVertically: true,
-                    getTooltipColor: (_) => mainColor.withOpacity(0.8),
-                    getTooltipItems: (List<LineBarSpot> touchedSpots) {
-                      return touchedSpots.map((spot) {
-                        final int index = spot.x.toInt();
-                        if (hasData && index >= 0 && index < dates.length) {
-                          final DateTime date = dates[index];
-                          final double value = values[index];
-                          return LineTooltipItem(
-                            '${dateFormat.format(date)}\n${_formatValueWithUnit(value, isHeightChart)}',
-                            TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          );
-                        } else {
-                          return const LineTooltipItem('', TextStyle());
-                        }
-                      }).toList();
-                    },
-                  ),
-                  handleBuiltInTouches: true,
-                ),
-              ),
-            ) : Center(
-              child: Text(
-                'Aucune donnée disponible',
-                style: TextStyle(color: Colors.grey[700]),
-              ),
-            ),
           ),
         ],
       ),
     );
   }
 
+  LineChartBarData _buildTrendLine(List<double> values) {
+    // Calculer la régression linéaire
+    final trend = _calculateLinearRegression(values);
+    final double slope = trend['slope']!;
+    final double intercept = trend['intercept']!;
+
+    // Générer les points pour la ligne de tendance
+    final List<FlSpot> trendSpots = List.generate(values.length, (index) {
+      final double y = slope * index + intercept;
+      return FlSpot(index.toDouble(), y);
+    });
+
+    // Déterminer la couleur de la ligne (rouge pour pente négative, vert pour pente positive)
+    final Color trendColor = slope >= 0
+        ? Colors.green.withOpacity(0.3) // Vert avec opacité encore plus réduite
+        : Colors.red.withOpacity(0.3); // Rouge avec opacité encore plus réduite
+
+    return LineChartBarData(
+      spots: trendSpots,
+      isCurved: false,
+      color: trendColor,
+      barWidth: 2,
+      isStrokeCapRound: true,
+      dotData: const FlDotData(show: false),
+      dashArray: [5, 5], // Ligne pointillée
+    );
+  }
+
+  Map<String, double> _calculateLinearRegression(List<double> values) {
+    final int n = values.length;
+    final List<double> x = List.generate(n, (index) => index.toDouble());
+    final double sumX = x.reduce((a, b) => a + b);
+    final double sumY = values.reduce((a, b) => a + b);
+    final double sumXY = List.generate(n, (index) => x[index] * values[index])
+        .reduce((a, b) => a + b);
+    final double sumX2 = x.map((xi) => xi * xi).reduce((a, b) => a + b);
+
+    final double slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    final double intercept = (sumY - slope * sumX) / n;
+
+    return {'slope': slope, 'intercept': intercept};
+  }
+
   double _getMinY(List<double> values) {
     if (values.isEmpty) return 0;
-    // Trouver le minimum des valeurs et ajouter une marge pour l'esthétique
     double min = values.reduce((a, b) => a < b ? a : b);
-    return min > 0 ? min * 0.9 : min * 1.1; // Inclut les valeurs négatives
+    return min > 0 ? min * 0.9 : min * 1.1;
   }
 
   double _getMaxY(List<double> values) {
     if (values.isEmpty) return 10;
-    // Trouver le maximum des valeurs et ajouter une marge pour l'esthétique
     double max = values.reduce((a, b) => a > b ? a : b);
-    return max > 0 ? max * 1.1 : max * 0.9; // Inclut les valeurs négatives
+    return max > 0 ? max * 1.1 : max * 0.9;
   }
-  
+
+  double _calculateInterval(List<double> values) {
+    if (values.isEmpty) return 1.0;
+    double min = values.reduce((a, b) => a < b ? a : b);
+    double max = values.reduce((a, b) => a > b ? a : b);
+    double range = max - min;
+
+    if (range <= 0) return 1.0;
+    return range / 5;
+  }
+
   double _calculateStep(List<double> values, int maxSteps) {
     if (values.isEmpty) return 1.0;
     double min = values.reduce((a, b) => a < b ? a : b);
@@ -216,23 +332,28 @@ class HydroLineChart extends StatelessWidget {
     return (range / maxSteps).ceilToDouble();
   }
 
-  // Formater les valeurs pour les afficher de façon plus lisible (K, M, etc.)
   String _formatValue(double value) {
     if (value >= 1000000) {
       return '${(value / 1000000).toStringAsFixed((value % 1000000 == 0) ? 0 : 1)}M';
     } else if (value >= 1000) {
       return '${(value / 1000).toStringAsFixed((value % 1000 == 0) ? 0 : 1)}k';
     } else if (value % 1 == 0) {
-      return value.toStringAsFixed(0); // Affiche uniquement la partie entière
+      return value.toStringAsFixed(0);
     } else {
       return value.toStringAsFixed(2);
     }
   }
-  
-  // Formater les valeurs avec l'unité appropriée
+
   String _formatValueWithUnit(double value, bool isHeight) {
     String formattedValue = _formatValue(value);
     String unit = isHeight ? 'm' : 'm³/s';
     return '$formattedValue $unit';
+  }
+
+  String _getNoDataText() {
+    final now = DateTime.now().second;
+    if (now % 3 == 0) return "-";
+    if (now % 3 == 1) return "- -";
+    return "- - -";
   }
 }
