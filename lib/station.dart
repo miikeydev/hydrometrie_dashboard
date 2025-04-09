@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latlong2;
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'theme.dart';
 
 class StationInfoPanel extends ConsumerStatefulWidget {
   final String initialSearchText;
@@ -162,7 +163,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
     );
 
     final controller = AnimationController(
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 4000), // Augmenté de 2000 à 4000 ms
       vsync: this,
     );
 
@@ -189,6 +190,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
     // Récupérer les suggestions depuis le provider Riverpod
     final stationSuggestionsAsync = ref.watch(stationSuggestionsProvider);
     final selectedStation = ref.watch(selectedStationProvider);
+    final isDarkMode = ref.watch(darkModeProvider);
 
     final stationSuggestions = stationSuggestionsAsync.when(
       data: (stations) {
@@ -230,13 +232,18 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
       );
     }
 
+    // URL de la carte en fonction du mode sombre
+    final tileUrl = isDarkMode
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8), // Légèrement transparent
+        color: AppTheme.getContainerBackgroundColor(context).withOpacity(0.8),
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).shadowColor,
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -281,19 +288,45 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                       focusNode: focusNode,
                       decoration: InputDecoration(
                         labelText: 'Rechercher une station',
+                        labelStyle: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey[300]
+                              : Colors.grey[700],
+                        ),
                         hintText: 'Saisissez le nom d\'une station',
-                        prefixIcon: const Icon(Icons.search),
+                        hintStyle: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey[500]
+                              : Colors.grey[400],
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey[300]
+                              : Colors.grey[600],
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey[700]!
+                                : Colors.grey[300]!,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.blue, width: 2),
+                          borderSide: const BorderSide(color: Colors.blue, width: 2),
                         ),
+                        filled: true,
+                        fillColor: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF2C2C2C)
+                            : Colors.white,
+                      ),
+                      style: TextStyle(
+                        color: AppTheme.getTextColor(context),
                       ),
                       onChanged: (query) {
                         print("➡️ onChanged triggered: $query");
@@ -315,7 +348,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                       child: Material(
                         elevation: 4.0,
                         borderRadius: BorderRadius.circular(8),
-                        color: Colors.white.withOpacity(1),
+                        color: AppTheme.getContainerBackgroundColor(context),
                         child: Container(
                           width: fieldWidth,
                           constraints: const BoxConstraints(maxHeight: 300),
@@ -324,7 +357,11 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                                   padding: const EdgeInsets.all(16.0),
                                   child: Text(
                                     "Aucune station trouvée",
-                                    style: TextStyle(color: Colors.grey[600]),
+                                    style: TextStyle(
+                                      color: Theme.of(context).brightness == Brightness.dark 
+                                          ? Colors.grey[400] 
+                                          : Colors.grey[600],
+                                    ),
                                   ),
                                 )
                               : ListView.separated(
@@ -340,7 +377,9 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                                       dense: true,
                                       title: Text(
                                         "$libelle ($code)",
-                                        style: const TextStyle(color: Colors.black),
+                                        style: TextStyle(
+                                          color: AppTheme.getTextColor(context),
+                                        ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       onTap: () => onSelected(option),
@@ -357,7 +396,9 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
               ElevatedButton(
                 onPressed: _resetFilters,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey[200],
+                  backgroundColor: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey[800]
+                      : Colors.grey[200],
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -366,9 +407,9 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                     vertical: 21,
                   ),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.refresh,
-                  color: Colors.black,
+                  color: AppTheme.getIconColor(context),
                   size: 20,
                 ),
               ),
@@ -382,7 +423,9 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Colors.grey[800],
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey[400]
+                  : Colors.grey[800],
             ),
           ),
           const SizedBox(height: 8),
@@ -390,9 +433,14 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
             height: 250, // Hauteur fixe pour le calendrier
             width: double.infinity, // Prend toute la largeur disponible
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.getContainerBackgroundColor(context),
               borderRadius: BorderRadius.circular(8),
-              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context).shadowColor,
+                  blurRadius: 2,
+                )
+              ],
             ),
             padding: const EdgeInsets.all(2),
   child: ClipRRect(
@@ -404,33 +452,47 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
       firstDate: widget.firstDate,
       lastDate: widget.lastDate,
       datePickerStyles: dp.DatePickerRangeStyles(
-        defaultDateTextStyle: const TextStyle(color: Colors.black),
+        defaultDateTextStyle: TextStyle(
+          color: AppTheme.getTextColor(context),
+        ),
+        disabledDateStyle: TextStyle(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey[700]
+              : Colors.grey[300],
+        ),
         selectedPeriodStartTextStyle: const TextStyle(color: Colors.white),
         selectedPeriodMiddleTextStyle: const TextStyle(color: Colors.white),
+        selectedPeriodEndTextStyle: const TextStyle(color: Colors.white),
+        displayedPeriodTitle: TextStyle(
+          color: AppTheme.getTextColor(context),
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+        // Remove defaultDateDecoration as it's not supported
         selectedPeriodStartDecoration: BoxDecoration(
           color: Colors.blue,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(16),
             bottomLeft: Radius.circular(16),
-                    ),
-                  ),
-                  selectedPeriodMiddleDecoration: BoxDecoration(
+          ),
+        ),
+        selectedPeriodMiddleDecoration: BoxDecoration(
           color: Colors.blue,
-                  ),
-                  selectedPeriodLastDecoration: BoxDecoration(
+        ),
+        selectedPeriodLastDecoration: BoxDecoration(
           color: Colors.blue,
           borderRadius: const BorderRadius.only(
             topRight: Radius.circular(16),
             bottomRight: Radius.circular(16),
-                    ),
-                  ),
-                  selectedSingleDateDecoration: BoxDecoration(
+          ),
+        ),
+        selectedSingleDateDecoration: BoxDecoration(
           color: Colors.blue,
           shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ),
+        ),
+      ),
+    ),
+  ),
           ),
           const SizedBox(height: 16),
 
@@ -440,7 +502,9 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Colors.grey[800],
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey[400]
+                  : Colors.grey[800],
             ),
           ),
           const SizedBox(height: 8),
@@ -450,7 +514,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Theme.of(context).shadowColor,
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -465,7 +529,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                    urlTemplate: tileUrl,
                     subdomains: ['a', 'b', 'c', 'd'],
                   ),
                   MarkerLayer(

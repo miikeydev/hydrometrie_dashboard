@@ -8,6 +8,7 @@ import 'graph.dart' as graph;
 import 'dart:developer' as developer;
 import 'package:intl/intl.dart';
 import 'water_level_widget.dart';
+import 'theme.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({Key? key}) : super(key: key);
@@ -17,6 +18,7 @@ class DashboardPage extends ConsumerWidget {
     final observationsAsync = ref.watch(observationsProvider);
     final selectedStation = ref.watch(selectedStationProvider);
     final dateRange = ref.watch(dateRangeProvider);
+    final isDarkMode = ref.watch(darkModeProvider);
 
     List<DateTime> xValuesDebitDates = [];
     List<double> yValuesDebit = [];
@@ -103,21 +105,56 @@ class DashboardPage extends ConsumerWidget {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          color: Colors.grey[200], // Fond de couleur gris clair
+          color: Theme.of(context).scaffoldBackgroundColor,
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween, // Aligne les éléments aux extrémités
               children: [
                 Expanded(
                   child: Text(
                     dashboardTitle,
-                    style: const TextStyle(
-                        fontSize: 24, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 24, 
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.getTextColor(context),
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Bouton de basculement du thème
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.getContainerBackgroundColor(context),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).shadowColor,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        ref.read(darkModeProvider.notifier).state = !isDarkMode;
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Icon(
+                          isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                          color: AppTheme.getIconColor(context),
+                          size: 24,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -174,7 +211,7 @@ class DashboardPage extends ConsumerWidget {
                                         children: [
                                           Icon(
                                             Icons.water_drop,
-                                            color: Colors.black,
+                                            color: AppTheme.getIconColor(context),
                                             size: 24,
                                           ),
                                           calculateTrend(yValuesDebit) != 0
@@ -182,7 +219,7 @@ class DashboardPage extends ConsumerWidget {
                                                   calculateTrend(yValuesDebit) > 0
                                                       ? Icons.north_east
                                                       : Icons.south_east,
-                                                  color: Colors.black,
+                                                  color: AppTheme.getIconColor(context),
                                                   size: 24,
                                                 )
                                               : const Text(
@@ -214,7 +251,7 @@ class DashboardPage extends ConsumerWidget {
                                         children: [
                                           Icon(
                                             Icons.height,
-                                            color: Colors.black,
+                                            color: AppTheme.getIconColor(context),
                                             size: 24,
                                           ),
                                           calculateTrend(yValuesHauteur) != 0
@@ -222,7 +259,7 @@ class DashboardPage extends ConsumerWidget {
                                                   calculateTrend(yValuesHauteur) > 0
                                                       ? Icons.north_east
                                                       : Icons.south_east,
-                                                  color: Colors.black,
+                                                  color: AppTheme.getIconColor(context),
                                                   size: 24,
                                                 )
                                               : const Text(

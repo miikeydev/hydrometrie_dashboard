@@ -149,3 +149,6 @@ final hauteurObservationsProvider = Provider<List<Map<String, dynamic>>>((ref) {
     orElse: () => [],
   );
 });
+
+// Provider pour le mode sombre
+final darkModeProvider = StateProvider<bool>((ref) => false);
