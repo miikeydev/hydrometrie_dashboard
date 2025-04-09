@@ -241,8 +241,8 @@ class DashboardPage extends ConsumerWidget {
                                   children: [
                                     Expanded(
                                       child: WaterLevelWidget(
-                                        // Toujours montrer au moins 10% de remplissage pour les cas sans données
-                                        fillPercent: (debitMoyen > 0 && _isValidDouble(minDebit) && _isValidDouble(maxDebit))
+                                        // Gestion améliorée des valeurs négatives
+                                        fillPercent: (debitMoyen != 0 && _isValidDouble(minDebit) && _isValidDouble(maxDebit))
                                             ? (() {
                                                 try {
                                                   final minVal = _extractNumericValue(minDebit);
@@ -251,16 +251,20 @@ class DashboardPage extends ConsumerWidget {
                                                   // Si min et max sont égaux, utiliser une position fixe (50%)
                                                   if (maxVal == minVal) return 0.5;
                                                   
+                                                  // Ajustement pour les plages avec des valeurs négatives et positives
+                                                  final totalRange = maxVal - minVal;
+                                                  if (totalRange == 0) return 0.5;
+                                                  
                                                   // Calcul du pourcentage comme position relative entre min et max
-                                                  return ((debitMoyen - minVal) / (maxVal - minVal)).clamp(0.0, 1.0);
+                                                  return ((debitMoyen - minVal) / totalRange).clamp(0.0, 1.0);
                                                 } catch (e) {
                                                   return 0.1; // 10% par défaut en cas d'erreur
                                                 }
                                               })()
                                             : 0.1, // 10% pour les cas sans données
                                         size: double.infinity,
-                                        formattedValue: debitMoyen > 0 ? formatValue(debitMoyen, 'm³/s') : 'N/A',
-                                        percentage: (debitMoyen > 0 && _isValidDouble(minDebit) && _isValidDouble(maxDebit)) 
+                                        formattedValue: debitMoyen != 0 ? formatValue(debitMoyen, 'm³/s') : 'N/A',
+                                        percentage: (debitMoyen != 0 && _isValidDouble(minDebit) && _isValidDouble(maxDebit)) 
                                             ? (() {
                                                 try {
                                                   final minVal = _extractNumericValue(minDebit);
@@ -268,7 +272,10 @@ class DashboardPage extends ConsumerWidget {
                                                   
                                                   if (maxVal == minVal) return "50%";
                                                   
-                                                  final percentValue = ((debitMoyen - minVal) / (maxVal - minVal) * 100).clamp(0.0, 100.0);
+                                                  final totalRange = maxVal - minVal;
+                                                  if (totalRange == 0) return "50%";
+                                                  
+                                                  final percentValue = ((debitMoyen - minVal) / totalRange * 100).clamp(0.0, 100.0);
                                                   return "${percentValue.toStringAsFixed(0)}%";
                                                 } catch (e) {
                                                   return "-%";
@@ -281,7 +288,7 @@ class DashboardPage extends ConsumerWidget {
                                     const SizedBox(height: 12),
                                     Expanded(
                                       child: WaterLevelWidget(
-                                        fillPercent: (hauteurMoyenne > 0 && _isValidDouble(minHauteur) && _isValidDouble(maxHauteur))
+                                        fillPercent: (hauteurMoyenne != 0 && _isValidDouble(minHauteur) && _isValidDouble(maxHauteur))
                                             ? (() {
                                                 try {
                                                   final minVal = _extractNumericValue(minHauteur);
@@ -290,16 +297,20 @@ class DashboardPage extends ConsumerWidget {
                                                   // Si min et max sont égaux, utiliser une position fixe (50%)
                                                   if (maxVal == minVal) return 0.5;
                                                   
+                                                  // Ajustement pour les plages avec des valeurs négatives et positives
+                                                  final totalRange = maxVal - minVal;
+                                                  if (totalRange == 0) return 0.5;
+                                                  
                                                   // Calcul du pourcentage comme position relative entre min et max
-                                                  return ((hauteurMoyenne - minVal) / (maxVal - minVal)).clamp(0.0, 1.0);
+                                                  return ((hauteurMoyenne - minVal) / totalRange).clamp(0.0, 1.0);
                                                 } catch (e) {
                                                   return 0.1; // 10% par défaut en cas d'erreur
                                                 }
                                               })()
                                             : 0.1, // 10% pour les cas sans données
                                         size: double.infinity,
-                                        formattedValue: hauteurMoyenne > 0 ? formatValue(hauteurMoyenne, 'm') : 'N/A',
-                                        percentage: (hauteurMoyenne > 0 && _isValidDouble(minHauteur) && _isValidDouble(maxHauteur))
+                                        formattedValue: hauteurMoyenne != 0 ? formatValue(hauteurMoyenne, 'm') : 'N/A',
+                                        percentage: (hauteurMoyenne != 0 && _isValidDouble(minHauteur) && _isValidDouble(maxHauteur))
                                             ? (() {
                                                 try {
                                                   final minVal = _extractNumericValue(minHauteur);
@@ -307,7 +318,10 @@ class DashboardPage extends ConsumerWidget {
                                                   
                                                   if (maxVal == minVal) return "50%";
                                                   
-                                                  final percentValue = ((hauteurMoyenne - minVal) / (maxVal - minVal) * 100).clamp(0.0, 100.0);
+                                                  final totalRange = maxVal - minVal;
+                                                  if (totalRange == 0) return "50%";
+                                                  
+                                                  final percentValue = ((hauteurMoyenne - minVal) / totalRange * 100).clamp(0.0, 100.0);
                                                   return "${percentValue.toStringAsFixed(0)}%";
                                                 } catch (e) {
                                                   return "-%";
