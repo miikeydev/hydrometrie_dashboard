@@ -5,6 +5,7 @@ import 'providers.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latlong2;
 import 'dart:async';
+import 'dart:developer' as developer;
 
 class StationInfoPanel extends ConsumerStatefulWidget {
   final String initialSearchText;
@@ -129,10 +130,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
       if (coordinates is List && coordinates.length == 2) {
         final longitude = coordinates[0];
         final latitude = coordinates[1];
-        debugPrint("Coordonnées de la station sélectionnée :");
-        debugPrint("Nom : $stationName");
-        debugPrint("Longitude : $longitude");
-        debugPrint("Latitude : $latitude");
+        developer.log("Station sélectionnée: $stationName, Latitude: $latitude, Longitude: $longitude", name: 'StationInfoPanel');
 
         _animatedMapMove(latlong2.LatLng(latitude, longitude), 13.0);
 
@@ -234,7 +232,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: Colors.white.withOpacity(0.8), // Légèrement transparent
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
@@ -377,7 +375,8 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
             ],
           ),
           const SizedBox(height: 16),
-          // Sélecteur de plage de dates
+          
+          // Date range picker - taille fixe
           Text(
             "Plage de dates",
             style: TextStyle(
@@ -388,11 +387,13 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
           ),
           const SizedBox(height: 8),
           Container(
-  decoration: BoxDecoration(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(8),
-    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
-  ),
+            height: 250, // Hauteur fixe pour le calendrier
+            width: double.infinity, // Prend toute la largeur disponible
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
+            ),
             padding: const EdgeInsets.all(2),
   child: ClipRRect(
     borderRadius: BorderRadius.circular(8),
@@ -432,7 +433,8 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
             ),
           ),
           const SizedBox(height: 16),
-          // Carte
+
+          // Map - s'agrandit automatiquement
           Text(
             "Carte des stations hydrométriques",
             style: TextStyle(
