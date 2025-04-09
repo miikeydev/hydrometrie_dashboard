@@ -12,7 +12,7 @@ class DashboardPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final observationsAsync = ref.watch(combinedObservationsProvider);
+    final observationsAsync = ref.watch(observationsProvider);
     final selectedStation = ref.watch(selectedStationProvider);
     final dateRange = ref.watch(dateRangeProvider);
 
