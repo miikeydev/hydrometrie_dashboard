@@ -8,6 +8,7 @@ import 'graph.dart' as graph;
 import 'dart:developer' as developer;
 import 'package:intl/intl.dart';
 import 'water_level_widget.dart';
+import 'theme.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({Key? key}) : super(key: key);
@@ -17,6 +18,7 @@ class DashboardPage extends ConsumerWidget {
     final observationsAsync = ref.watch(observationsProvider);
     final selectedStation = ref.watch(selectedStationProvider);
     final dateRange = ref.watch(dateRangeProvider);
+    final isDarkMode = ref.watch(darkModeProvider);
 
     List<DateTime> xValuesDebitDates = [];
     List<double> yValuesDebit = [];
@@ -42,8 +44,19 @@ class DashboardPage extends ConsumerWidget {
 
       // Traitement des données de débit
       if (debitData.isNotEmpty) {
-        
-
+        // Tri des données par date
+        debitData.sort((a, b) => DateTime.parse(a['date_obs'])
+            .compareTo(DateTime.parse(b['date_obs'])));
+            
+        // Extraction des dates et des valeurs de débit
+        xValuesDebitDates = debitData
+            .map<DateTime>((obs) => DateTime.parse(obs['date_obs']))
+            .toList();
+        yValuesDebit = debitData.map<double>((obs) {
+          return (obs['resultat_obs'] is num)
+              ? obs['resultat_obs'].toDouble()
+              : 0.0;
+        }).toList();
 
         if (yValuesDebit.isNotEmpty) {
           debitMoyen = yValuesDebit.reduce((a, b) => a + b) / yValuesDebit.length; // Moyenne incluant les négatifs
@@ -51,7 +64,6 @@ class DashboardPage extends ConsumerWidget {
           final maxDebitValue = yValuesDebit.reduce((a, b) => a > b ? a : b);
           minDebit = formatValue(minDebitValue, 'm³/s');
           maxDebit = formatValue(maxDebitValue, 'm³/s');
-
         }
       }
 
@@ -93,21 +105,56 @@ class DashboardPage extends ConsumerWidget {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          color: Colors.grey[200], // Fond de couleur gris clair
+          color: Theme.of(context).scaffoldBackgroundColor,
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween, // Aligne les éléments aux extrémités
               children: [
                 Expanded(
                   child: Text(
                     dashboardTitle,
-                    style: const TextStyle(
-                        fontSize: 24, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 24, 
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.getTextColor(context),
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Bouton de basculement du thème
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.getContainerBackgroundColor(context),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).shadowColor,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        ref.read(darkModeProvider.notifier).state = !isDarkMode;
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Icon(
+                          isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                          color: AppTheme.getIconColor(context),
+                          size: 24,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -119,7 +166,7 @@ class DashboardPage extends ConsumerWidget {
                 children: [
                   SizedBox(
 
-                    width: 400, // Augmenté de 350 à 400 pour plus d'espace
+                    width: 400, 
 
                     child: StationInfoPanel(
                       initialDateRange: DateTimeRange(
@@ -132,14 +179,14 @@ class DashboardPage extends ConsumerWidget {
                     ),
                   ),
 
-                  const SizedBox(width: 16), // Espacement ajusté
+                  const SizedBox(width: 16),
 
                   SizedBox(
-                    width: 300, // Augmenté de 260 à 300
+                    width: 300,
                     child: Column(
                       children: [
                         Expanded(
-                          flex: 6, // Augmente la proportion de la section KPI
+                          flex: 6, 
                           child: Column(
                             children: [
                               Row(
@@ -164,7 +211,7 @@ class DashboardPage extends ConsumerWidget {
                                         children: [
                                           Icon(
                                             Icons.water_drop,
-                                            color: Colors.black,
+                                            color: AppTheme.getIconColor(context),
                                             size: 24,
                                           ),
                                           calculateTrend(yValuesDebit) != 0
@@ -172,11 +219,11 @@ class DashboardPage extends ConsumerWidget {
                                                   calculateTrend(yValuesDebit) > 0
                                                       ? Icons.north_east
                                                       : Icons.south_east,
-                                                  color: Colors.black,
+                                                  color: AppTheme.getIconColor(context),
                                                   size: 24,
                                                 )
                                               : const Text(
-                                                  '-', // Remplacement de '--' par '-'
+                                                  '-', 
                                                   style: TextStyle(color: Colors.black, fontSize: 16),
                                                 ),
                                         ],
@@ -204,7 +251,7 @@ class DashboardPage extends ConsumerWidget {
                                         children: [
                                           Icon(
                                             Icons.height,
-                                            color: Colors.black,
+                                            color: AppTheme.getIconColor(context),
                                             size: 24,
                                           ),
                                           calculateTrend(yValuesHauteur) != 0
@@ -212,11 +259,11 @@ class DashboardPage extends ConsumerWidget {
                                                   calculateTrend(yValuesHauteur) > 0
                                                       ? Icons.north_east
                                                       : Icons.south_east,
-                                                  color: Colors.black,
+                                                  color: AppTheme.getIconColor(context),
                                                   size: 24,
                                                 )
                                               : const Text(
-                                                  '-', // Remplacement de '--' par '-'
+                                                  '-', 
                                                   style: TextStyle(color: Colors.black, fontSize: 16),
                                                 ),
                                         ],
@@ -231,8 +278,8 @@ class DashboardPage extends ConsumerWidget {
                                   children: [
                                     Expanded(
                                       child: WaterLevelWidget(
-                                        // Toujours montrer au moins 10% de remplissage pour les cas sans données
-                                        fillPercent: (debitMoyen > 0 && _isValidDouble(minDebit) && _isValidDouble(maxDebit))
+                                        // Gestion améliorée des valeurs négatives
+                                        fillPercent: (debitMoyen != 0 && _isValidDouble(minDebit) && _isValidDouble(maxDebit))
                                             ? (() {
                                                 try {
                                                   final minVal = _extractNumericValue(minDebit);
@@ -241,16 +288,20 @@ class DashboardPage extends ConsumerWidget {
                                                   // Si min et max sont égaux, utiliser une position fixe (50%)
                                                   if (maxVal == minVal) return 0.5;
                                                   
+                                                  // Ajustement pour les plages avec des valeurs négatives et positives
+                                                  final totalRange = maxVal - minVal;
+                                                  if (totalRange == 0) return 0.5;
+                                                  
                                                   // Calcul du pourcentage comme position relative entre min et max
-                                                  return ((debitMoyen - minVal) / (maxVal - minVal)).clamp(0.0, 1.0);
+                                                  return ((debitMoyen - minVal) / totalRange).clamp(0.0, 1.0);
                                                 } catch (e) {
                                                   return 0.1; // 10% par défaut en cas d'erreur
                                                 }
                                               })()
                                             : 0.1, // 10% pour les cas sans données
                                         size: double.infinity,
-                                        formattedValue: debitMoyen > 0 ? formatValue(debitMoyen, 'm³/s') : 'N/A',
-                                        percentage: (debitMoyen > 0 && _isValidDouble(minDebit) && _isValidDouble(maxDebit)) 
+                                        formattedValue: debitMoyen != 0 ? formatValue(debitMoyen, 'm³/s') : 'N/A',
+                                        percentage: (debitMoyen != 0 && _isValidDouble(minDebit) && _isValidDouble(maxDebit)) 
                                             ? (() {
                                                 try {
                                                   final minVal = _extractNumericValue(minDebit);
@@ -258,7 +309,10 @@ class DashboardPage extends ConsumerWidget {
                                                   
                                                   if (maxVal == minVal) return "50%";
                                                   
-                                                  final percentValue = ((debitMoyen - minVal) / (maxVal - minVal) * 100).clamp(0.0, 100.0);
+                                                  final totalRange = maxVal - minVal;
+                                                  if (totalRange == 0) return "50%";
+                                                  
+                                                  final percentValue = ((debitMoyen - minVal) / totalRange * 100).clamp(0.0, 100.0);
                                                   return "${percentValue.toStringAsFixed(0)}%";
                                                 } catch (e) {
                                                   return "-%";
@@ -271,7 +325,7 @@ class DashboardPage extends ConsumerWidget {
                                     const SizedBox(height: 12),
                                     Expanded(
                                       child: WaterLevelWidget(
-                                        fillPercent: (hauteurMoyenne > 0 && _isValidDouble(minHauteur) && _isValidDouble(maxHauteur))
+                                        fillPercent: (hauteurMoyenne != 0 && _isValidDouble(minHauteur) && _isValidDouble(maxHauteur))
                                             ? (() {
                                                 try {
                                                   final minVal = _extractNumericValue(minHauteur);
@@ -280,16 +334,20 @@ class DashboardPage extends ConsumerWidget {
                                                   // Si min et max sont égaux, utiliser une position fixe (50%)
                                                   if (maxVal == minVal) return 0.5;
                                                   
+                                                  // Ajustement pour les plages avec des valeurs négatives et positives
+                                                  final totalRange = maxVal - minVal;
+                                                  if (totalRange == 0) return 0.5;
+                                                  
                                                   // Calcul du pourcentage comme position relative entre min et max
-                                                  return ((hauteurMoyenne - minVal) / (maxVal - minVal)).clamp(0.0, 1.0);
+                                                  return ((hauteurMoyenne - minVal) / totalRange).clamp(0.0, 1.0);
                                                 } catch (e) {
                                                   return 0.1; // 10% par défaut en cas d'erreur
                                                 }
                                               })()
                                             : 0.1, // 10% pour les cas sans données
                                         size: double.infinity,
-                                        formattedValue: hauteurMoyenne > 0 ? formatValue(hauteurMoyenne, 'm') : 'N/A',
-                                        percentage: (hauteurMoyenne > 0 && _isValidDouble(minHauteur) && _isValidDouble(maxHauteur))
+                                        formattedValue: hauteurMoyenne != 0 ? formatValue(hauteurMoyenne, 'm') : 'N/A',
+                                        percentage: (hauteurMoyenne != 0 && _isValidDouble(minHauteur) && _isValidDouble(maxHauteur))
                                             ? (() {
                                                 try {
                                                   final minVal = _extractNumericValue(minHauteur);
@@ -297,7 +355,10 @@ class DashboardPage extends ConsumerWidget {
                                                   
                                                   if (maxVal == minVal) return "50%";
                                                   
-                                                  final percentValue = ((hauteurMoyenne - minVal) / (maxVal - minVal) * 100).clamp(0.0, 100.0);
+                                                  final totalRange = maxVal - minVal;
+                                                  if (totalRange == 0) return "50%";
+                                                  
+                                                  final percentValue = ((hauteurMoyenne - minVal) / totalRange * 100).clamp(0.0, 100.0);
                                                   return "${percentValue.toStringAsFixed(0)}%";
                                                 } catch (e) {
                                                   return "-%";
@@ -365,7 +426,7 @@ class DashboardPage extends ConsumerWidget {
                   ),
 
 
-                  const SizedBox(width: 16), // Espacement ajusté
+                  const SizedBox(width: 16), 
 
 
                   Expanded(
@@ -374,7 +435,7 @@ class DashboardPage extends ConsumerWidget {
                         Expanded(
                           flex: 1,
                           child: graph.HydroLineChart(
-                            title: 'Évolution Débit', // Titre simplifié sans dates
+                            title: 'Évolution Débit', 
                             dates: xValuesDebitDates,
                             values: yValuesDebit,
                             startDate: dateRange.start,
@@ -386,7 +447,7 @@ class DashboardPage extends ConsumerWidget {
                         Expanded(
                           flex: 1,
                           child: graph.HydroLineChart(
-                            title: 'Évolution Hauteur', // Titre simplifié sans dates
+                            title: 'Évolution Hauteur', 
                             dates: xValuesHauteurDates,
                             values: yValuesHauteur,
                             startDate: dateRange.start,
@@ -420,7 +481,7 @@ class DashboardPage extends ConsumerWidget {
     } else if (value >= 1000) {
       formattedValue = '${(value / 1000).toStringAsFixed((value % 1000 == 0) ? 0 : 1)}k';
     } else if (value % 1 == 0) {
-      formattedValue = value.toStringAsFixed(0); // Affiche uniquement la partie entière
+      formattedValue = value.toStringAsFixed(0); 
     } else {
       formattedValue = value.toStringAsFixed(2);
     }
@@ -440,16 +501,16 @@ class DashboardPage extends ConsumerWidget {
       if (numStr.contains('k') || numStr.contains('K')) {
         numStr = numStr.replaceAll('k', '').replaceAll('K', '');
         double baseValue = double.parse(numStr);
-        return baseValue * 1000 > 0; // Vérifier que la valeur est positive
+        return baseValue * 1000 != 0; // On vérifie seulement que la valeur n'est pas zéro
       } 
       else if (numStr.contains('m') || numStr.contains('M')) {
         numStr = numStr.replaceAll('m', '').replaceAll('M', '');
         double baseValue = double.parse(numStr);
-        return baseValue * 1000000 > 0; // Vérifier que la valeur est positive
+        return baseValue * 1000000 != 0; // On vérifie seulement que la valeur n'est pas zéro
       }
       
-      // Cas standard
-      return double.parse(numStr) > 0;
+      // Cas standard - accepter les valeurs négatives
+      return double.parse(numStr) != 0; // On vérifie seulement que la valeur n'est pas zéro
     } catch (e) {
       return false;
     }
@@ -461,19 +522,30 @@ class DashboardPage extends ConsumerWidget {
     // Extraire la partie numérique (avant l'unité)
     String numericPart = formattedValue.split(' ')[0].trim();
     
+    // Traiter le signe négatif explicitement
+    bool isNegative = numericPart.startsWith('-');
+    if (isNegative) {
+      numericPart = numericPart.substring(1); // Enlever le signe négatif pour le traitement
+    }
+    
+    double value = 0.0;
+    
     // Gérer le cas des milliers (k)
     if (numericPart.contains('k') || numericPart.contains('K')) {
       numericPart = numericPart.replaceAll('k', '').replaceAll('K', '');
-      return double.parse(numericPart) * 1000;
+      value = double.parse(numericPart) * 1000;
     }
-    
     // Gérer le cas des millions (M)
-    if (numericPart.contains('M')) {
+    else if (numericPart.contains('M')) {
       numericPart = numericPart.replaceAll('M', '');
-      return double.parse(numericPart) * 1000000;
+      value = double.parse(numericPart) * 1000000;
+    }
+    // Cas de base - juste un nombre
+    else {
+      value = double.parse(numericPart);
     }
     
-    // Cas de base - juste un nombre
-    return double.parse(numericPart);
+    // Réappliquer le signe négatif si nécessaire
+    return isNegative ? -value : value;
   }
 }

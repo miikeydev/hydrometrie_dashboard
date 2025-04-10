@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'theme.dart';
 
 class HydroLineChart extends StatefulWidget {
   final String title;
@@ -8,7 +9,7 @@ class HydroLineChart extends StatefulWidget {
   final List<double> values;
   final DateTime? startDate;
   final DateTime? endDate;
-  final bool isHeightChart; // Pour distinguer les graphiques de hauteur et de débit
+  final bool isHeightChart; 
 
   const HydroLineChart({
     Key? key,
@@ -17,7 +18,7 @@ class HydroLineChart extends StatefulWidget {
     required this.values,
     this.startDate,
     this.endDate,
-    this.isHeightChart = false, // Par défaut c'est un graphique de débit
+    this.isHeightChart = false, 
   }) : super(key: key);
 
   @override
@@ -50,19 +51,19 @@ class _HydroLineChartState extends State<HydroLineChart>
         widget.dates.length == widget.values.length;
 
     final Color mainColor = widget.isHeightChart
-        ? const Color(0xFF64B5F6) // Bleu plus clair pour hauteur
-        : const Color(0xFF1976D2); // Bleu plus foncé pour débit;
+        ? AppTheme.hauteurMainColor 
+        : AppTheme.debitMainColor;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12), // Uniformisation du radius
-        boxShadow: const [
+        color: AppTheme.getSecondaryContainerColor(context),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
           BoxShadow(
-            color: Colors.black12,
+            color: Theme.of(context).shadowColor,
             blurRadius: 4,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -74,7 +75,7 @@ class _HydroLineChartState extends State<HydroLineChart>
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
+              color: AppTheme.getTextColor(context),
             ),
           ),
           const SizedBox(height: 16),
@@ -88,13 +89,17 @@ class _HydroLineChartState extends State<HydroLineChart>
                         drawHorizontalLine: true,
                         getDrawingHorizontalLine: (value) {
                           return FlLine(
-                            color: Colors.grey.shade300.withOpacity(0.5),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey[800]!.withOpacity(0.5)
+                                : Colors.grey[300]!.withOpacity(0.5),
                             strokeWidth: 1,
                           );
                         },
                         getDrawingVerticalLine: (value) {
                           return FlLine(
-                            color: Colors.grey.shade300.withOpacity(0.5),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey[800]!.withOpacity(0.5)
+                                : Colors.grey[300]!.withOpacity(0.5),
                             strokeWidth: 1,
                           );
                         },
@@ -118,7 +123,10 @@ class _HydroLineChartState extends State<HydroLineChart>
                                     child: Text(
                                       DateFormat('dd/MM HH:mm').format(
                                           widget.dates[value.toInt()]),
-                                      style: const TextStyle(fontSize: 10),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: AppTheme.getTextColor(context),
+                                      ),
                                     ),
                                   );
                                 }
@@ -143,7 +151,10 @@ class _HydroLineChartState extends State<HydroLineChart>
                                   if ((value - checkValue).abs() < step / 10) {
                                     return Text(
                                       _formatValue(value),
-                                      style: const TextStyle(fontSize: 10),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: AppTheme.getTextColor(context),
+                                      ),
                                     );
                                   }
                                 }
@@ -162,7 +173,9 @@ class _HydroLineChartState extends State<HydroLineChart>
                       borderData: FlBorderData(
                         show: true,
                         border: Border.all(
-                            color: Colors.grey.shade300.withOpacity(0.5)),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey[800]!.withOpacity(0.5)
+                                : Colors.grey[300]!.withOpacity(0.5)),
                       ),
                       minX: 0,
                       maxX: hasData
@@ -243,9 +256,11 @@ class _HydroLineChartState extends State<HydroLineChart>
                   )
                 : Center(
                     child: Text(
-                      "En attente des données...", // Message simple
+                      "En attente des données...", 
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey[400]
+                            : Colors.grey[600],
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
@@ -271,8 +286,8 @@ class _HydroLineChartState extends State<HydroLineChart>
 
     // Déterminer la couleur de la ligne (rouge pour pente négative, vert pour pente positive)
     final Color trendColor = slope >= 0
-        ? Colors.green.withOpacity(0.3) // Vert avec opacité encore plus réduite
-        : Colors.red.withOpacity(0.3); // Rouge avec opacité encore plus réduite
+        ? Colors.green.withOpacity(0.6) 
+        : Colors.red.withOpacity(0.6);
 
     return LineChartBarData(
       spots: trendSpots,

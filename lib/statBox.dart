@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'theme.dart';
 
 class StatBox extends StatelessWidget {
   final String label;
@@ -20,11 +21,11 @@ class StatBox extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.getContainerBackgroundColor(context),
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Theme.of(context).shadowColor,
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -38,7 +39,9 @@ class StatBox extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 13,
-              color: Colors.grey[700],
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? Colors.grey[400] 
+                  : Colors.grey[700],
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -55,9 +58,10 @@ class StatBox extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     child: Text(
                       numericValue,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 34,
                         fontWeight: FontWeight.bold,
+                        color: AppTheme.getTextColor(context),
                       ),
                     ),
                   ),
@@ -72,7 +76,9 @@ class StatBox extends StatelessWidget {
                       unit,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey[600],
+                        color: Theme.of(context).brightness == Brightness.dark 
+                            ? Colors.grey[400] 
+                            : Colors.grey[600],
                       ),
                     ),
                   ),

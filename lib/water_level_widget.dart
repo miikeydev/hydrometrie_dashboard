@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'theme.dart';
 
 class WaterLevelWidget extends StatefulWidget {
   final double fillPercent;
@@ -101,11 +102,11 @@ class _WaterLevelWidgetState extends State<WaterLevelWidget>
           width: widget.size,
           height: widget.size,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.getContainerBackgroundColor(context),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Theme.of(context).shadowColor,
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -120,6 +121,7 @@ class _WaterLevelWidgetState extends State<WaterLevelWidget>
                   waveValue1: _waveController1.value * 2 * pi,
                   waveValue2: _waveController2.value * 2 * pi,
                   title: widget.title,
+                  isDarkMode: Theme.of(context).brightness == Brightness.dark,
                 ),
                 size: Size(widget.size, widget.size),
               ),
@@ -131,15 +133,15 @@ class _WaterLevelWidgetState extends State<WaterLevelWidget>
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.7),
+                    color: AppTheme.getContainerBackgroundColor(context).withOpacity(0.7),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     widget.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: AppTheme.getTextColor(context),
                     ),
                   ),
                 ),
@@ -152,7 +154,7 @@ class _WaterLevelWidgetState extends State<WaterLevelWidget>
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.7),
+                    color: AppTheme.getContainerBackgroundColor(context).withOpacity(0.7),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -160,7 +162,7 @@ class _WaterLevelWidgetState extends State<WaterLevelWidget>
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: hasData ? Colors.black : Colors.grey,
+                      color: hasData ? AppTheme.getTextColor(context) : Colors.grey,
                     ),
                   ),
                 ),
@@ -178,12 +180,14 @@ class WaterPainter extends CustomPainter {
   final double waveValue1;
   final double waveValue2;
   final String title;
+  final bool isDarkMode;
 
   WaterPainter({
     required this.fillPercent,
     required this.waveValue1,
     required this.waveValue2,
     required this.title,
+    required this.isDarkMode,
   });
 
   @override
@@ -228,11 +232,11 @@ class WaterPainter extends CustomPainter {
     Color lightColor;
     
     if (title.contains("Q")) { // Pour le débit (Q)
-      mainColor = Color(0xFF1976D2); // Bleu plus foncé
-      lightColor = Color(0xFF2196F3); // Bleu moyennement clair
+      mainColor = AppTheme.debitMainColor; // Utilise les couleurs définies dans AppTheme
+      lightColor = AppTheme.debitLightColor;
     } else { // Pour la hauteur (H)
-      mainColor = Color(0xFF64B5F6); // Bleu plus clair
-      lightColor = Color(0xFFBBDEFB); // Bleu très clair
+      mainColor = AppTheme.hauteurMainColor;
+      lightColor = AppTheme.hauteurLightColor;
     }
     
     // Couleurs des vagues avec dégradés adaptés au type
