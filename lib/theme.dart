@@ -21,8 +21,8 @@ class AppTheme {
 
   static final ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
-    scaffoldBackgroundColor: const Color(0xFF121212), // Gris très foncé standard pour Material Dark
-    cardColor: const Color(0xFF1E1E1E), // Un peu plus clair que le fond
+    scaffoldBackgroundColor: const Color(0xFF121212), 
+    cardColor: const Color(0xFF1E1E1E), 
     appBarTheme: const AppBarTheme(
       backgroundColor: Color(0xFF121212),
       iconTheme: IconThemeData(color: Colors.white),

@@ -9,7 +9,7 @@ class HydroLineChart extends StatefulWidget {
   final List<double> values;
   final DateTime? startDate;
   final DateTime? endDate;
-  final bool isHeightChart; // Pour distinguer les graphiques de hauteur et de débit
+  final bool isHeightChart; 
 
   const HydroLineChart({
     Key? key,
@@ -18,7 +18,7 @@ class HydroLineChart extends StatefulWidget {
     required this.values,
     this.startDate,
     this.endDate,
-    this.isHeightChart = false, // Par défaut c'est un graphique de débit
+    this.isHeightChart = false, 
   }) : super(key: key);
 
   @override
@@ -51,7 +51,7 @@ class _HydroLineChartState extends State<HydroLineChart>
         widget.dates.length == widget.values.length;
 
     final Color mainColor = widget.isHeightChart
-        ? AppTheme.hauteurMainColor // Utilisation des couleurs définies dans AppTheme
+        ? AppTheme.hauteurMainColor 
         : AppTheme.debitMainColor;
 
     return Container(
@@ -256,7 +256,7 @@ class _HydroLineChartState extends State<HydroLineChart>
                   )
                 : Center(
                     child: Text(
-                      "En attente des données...", // Message simple
+                      "En attente des données...", 
                       style: TextStyle(
                         color: Theme.of(context).brightness == Brightness.dark
                             ? Colors.grey[400]
@@ -286,8 +286,8 @@ class _HydroLineChartState extends State<HydroLineChart>
 
     // Déterminer la couleur de la ligne (rouge pour pente négative, vert pour pente positive)
     final Color trendColor = slope >= 0
-        ? Colors.green.withOpacity(0.6) // Augmenté de 0.3 à 0.6
-        : Colors.red.withOpacity(0.6); // Augmenté de 0.3 à 0.6
+        ? Colors.green.withOpacity(0.6) 
+        : Colors.red.withOpacity(0.6);
 
     return LineChartBarData(
       spots: trendSpots,

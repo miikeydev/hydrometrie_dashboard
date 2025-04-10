@@ -163,7 +163,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
     );
 
     final controller = AnimationController(
-      duration: const Duration(milliseconds: 4000), // Augmenté de 2000 à 4000 ms
+      duration: const Duration(milliseconds: 4000), 
       vsync: this,
     );
 

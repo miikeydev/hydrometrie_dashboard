@@ -166,7 +166,7 @@ class DashboardPage extends ConsumerWidget {
                 children: [
                   SizedBox(
 
-                    width: 400, // Augmenté de 350 à 400 pour plus d'espace
+                    width: 400, 
 
                     child: StationInfoPanel(
                       initialDateRange: DateTimeRange(
@@ -179,14 +179,14 @@ class DashboardPage extends ConsumerWidget {
                     ),
                   ),
 
-                  const SizedBox(width: 16), // Espacement ajusté
+                  const SizedBox(width: 16),
 
                   SizedBox(
-                    width: 300, // Augmenté de 260 à 300
+                    width: 300,
                     child: Column(
                       children: [
                         Expanded(
-                          flex: 6, // Augmente la proportion de la section KPI
+                          flex: 6, 
                           child: Column(
                             children: [
                               Row(
@@ -223,7 +223,7 @@ class DashboardPage extends ConsumerWidget {
                                                   size: 24,
                                                 )
                                               : const Text(
-                                                  '-', // Remplacement de '--' par '-'
+                                                  '-', 
                                                   style: TextStyle(color: Colors.black, fontSize: 16),
                                                 ),
                                         ],
@@ -263,7 +263,7 @@ class DashboardPage extends ConsumerWidget {
                                                   size: 24,
                                                 )
                                               : const Text(
-                                                  '-', // Remplacement de '--' par '-'
+                                                  '-', 
                                                   style: TextStyle(color: Colors.black, fontSize: 16),
                                                 ),
                                         ],
@@ -426,7 +426,7 @@ class DashboardPage extends ConsumerWidget {
                   ),
 
 
-                  const SizedBox(width: 16), // Espacement ajusté
+                  const SizedBox(width: 16), 
 
 
                   Expanded(
@@ -435,7 +435,7 @@ class DashboardPage extends ConsumerWidget {
                         Expanded(
                           flex: 1,
                           child: graph.HydroLineChart(
-                            title: 'Évolution Débit', // Titre simplifié sans dates
+                            title: 'Évolution Débit', 
                             dates: xValuesDebitDates,
                             values: yValuesDebit,
                             startDate: dateRange.start,
@@ -447,7 +447,7 @@ class DashboardPage extends ConsumerWidget {
                         Expanded(
                           flex: 1,
                           child: graph.HydroLineChart(
-                            title: 'Évolution Hauteur', // Titre simplifié sans dates
+                            title: 'Évolution Hauteur', 
                             dates: xValuesHauteurDates,
                             values: yValuesHauteur,
                             startDate: dateRange.start,
@@ -481,7 +481,7 @@ class DashboardPage extends ConsumerWidget {
     } else if (value >= 1000) {
       formattedValue = '${(value / 1000).toStringAsFixed((value % 1000 == 0) ? 0 : 1)}k';
     } else if (value % 1 == 0) {
-      formattedValue = value.toStringAsFixed(0); // Affiche uniquement la partie entière
+      formattedValue = value.toStringAsFixed(0); 
     } else {
       formattedValue = value.toStringAsFixed(2);
     }
