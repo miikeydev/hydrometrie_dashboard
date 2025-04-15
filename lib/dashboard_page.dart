@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'station.dart';
 import 'providers.dart';
-import 'gaugeChart.dart' as gauge;
 import 'statBox.dart' as statbox;
 import 'graph.dart' as graph;
 import 'dart:developer' as developer;
-import 'package:intl/intl.dart';
 import 'water_level_widget.dart';
 import 'theme.dart';
 
@@ -92,7 +90,7 @@ class DashboardPage extends ConsumerWidget {
       }
     }
 
-    String periodLabel = "";
+
 
     String dashboardTitle = "Hydrométrie Dashboard";
     if (selectedStation != null) {
