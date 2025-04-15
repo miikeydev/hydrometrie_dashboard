@@ -327,26 +327,6 @@ class _HydroLineChartState extends State<HydroLineChart>
     return max > 0 ? max * 1.1 : max * 0.9;
   }
 
-  double _calculateInterval(List<double> values) {
-    if (values.isEmpty) return 1.0;
-    double min = values.reduce((a, b) => a < b ? a : b);
-    double max = values.reduce((a, b) => a > b ? a : b);
-    double range = max - min;
-
-    if (range <= 0) return 1.0;
-    return range / 5;
-  }
-
-  double _calculateStep(List<double> values, int maxSteps) {
-    if (values.isEmpty) return 1.0;
-    double min = values.reduce((a, b) => a < b ? a : b);
-    double max = values.reduce((a, b) => a > b ? a : b);
-    double range = max - min;
-
-    if (range <= 0) return 1.0;
-    return (range / maxSteps).ceilToDouble();
-  }
-
   String _formatValue(double value) {
     if (value >= 1000000) {
       return '${(value / 1000000).toStringAsFixed((value % 1000000 == 0) ? 0 : 1)}M';
@@ -363,12 +343,5 @@ class _HydroLineChartState extends State<HydroLineChart>
     String formattedValue = _formatValue(value);
     String unit = isHeight ? 'm' : 'm³/s';
     return '$formattedValue $unit';
-  }
-
-  String _getNoDataText() {
-    final now = DateTime.now().second;
-    if (now % 3 == 0) return "-";
-    if (now % 3 == 1) return "- -";
-    return "- - -";
   }
 }

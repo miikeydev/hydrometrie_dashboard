@@ -100,22 +100,38 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
   }
 
   void _onPeriodChanged(dp.DatePeriod newPeriod) {
-    final adjustedStart = newPeriod.start.isAfter(widget.maxSelectableDate)
-        ? widget.maxSelectableDate
-        : newPeriod.start;
-    final adjustedEnd = newPeriod.end.isAfter(widget.maxSelectableDate)
-        ? widget.maxSelectableDate
-        : newPeriod.end;
+    if (!mounted) return;
+    
+    try {
+      final adjustedStart = newPeriod.start.isAfter(widget.maxSelectableDate)
+          ? widget.maxSelectableDate
+          : newPeriod.start;
+      final adjustedEnd = newPeriod.end.isAfter(widget.maxSelectableDate)
+          ? widget.maxSelectableDate
+          : newPeriod.end;
 
-    final validStart = adjustedStart.isAfter(adjustedEnd) ? adjustedEnd : adjustedStart;
+      final validStart = adjustedStart.isAfter(adjustedEnd) ? adjustedEnd : adjustedStart;
 
-    setState(() {
-      _currentPeriod = dp.DatePeriod(validStart, adjustedEnd);
-    });
-    ref.read(dateRangeProvider.notifier).state = DateTimeRange(
-      start: validStart,
-      end: adjustedEnd,
-    );
+      setState(() {
+        _currentPeriod = dp.DatePeriod(validStart, adjustedEnd);
+      });
+      
+ 
+      Future.microtask(() {
+        if (mounted) {
+          ref.read(dateRangeProvider.notifier).state = DateTimeRange(
+            start: validStart,
+            end: adjustedEnd,
+          );
+        }
+      });
+    } catch (e) {
+      debugPrint("Error updating date period: $e");
+      final today = DateTime.now().toLocal();
+      setState(() {
+        _currentPeriod = dp.DatePeriod(today, today);
+      });
+    }
   }
 
   void _onStationSelected(Map<String, dynamic> selection) async {
@@ -443,56 +459,56 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
               ],
             ),
             padding: const EdgeInsets.all(2),
-  child: ClipRRect(
-    borderRadius: BorderRadius.circular(8),
-    child: dp.RangePicker(
-      key: ValueKey(_currentPeriod.start), // *** Ajout de la ValueKey
-      selectedPeriod: _currentPeriod,
-      onChanged: _onPeriodChanged,
-      firstDate: widget.firstDate,
-      lastDate: widget.lastDate,
-      datePickerStyles: dp.DatePickerRangeStyles(
-        defaultDateTextStyle: TextStyle(
-          color: AppTheme.getTextColor(context),
-        ),
-        disabledDateStyle: TextStyle(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.grey[700]
-              : Colors.grey[300],
-        ),
-        selectedPeriodStartTextStyle: const TextStyle(color: Colors.white),
-        selectedPeriodMiddleTextStyle: const TextStyle(color: Colors.white),
-        selectedPeriodEndTextStyle: const TextStyle(color: Colors.white),
-        displayedPeriodTitle: TextStyle(
-          color: AppTheme.getTextColor(context),
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
-        // Remove defaultDateDecoration as it's not supported
-        selectedPeriodStartDecoration: BoxDecoration(
-          color: Colors.blue,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(16),
-            bottomLeft: Radius.circular(16),
-          ),
-        ),
-        selectedPeriodMiddleDecoration: BoxDecoration(
-          color: Colors.blue,
-        ),
-        selectedPeriodLastDecoration: BoxDecoration(
-          color: Colors.blue,
-          borderRadius: const BorderRadius.only(
-            topRight: Radius.circular(16),
-            bottomRight: Radius.circular(16),
-          ),
-        ),
-        selectedSingleDateDecoration: BoxDecoration(
-          color: Colors.blue,
-          shape: BoxShape.circle,
-        ),
-      ),
-    ),
-  ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: dp.RangePicker(
+                key: ObjectKey(_currentPeriod),
+                selectedPeriod: _currentPeriod,
+                onChanged: _onPeriodChanged,
+                firstDate: widget.firstDate,
+                lastDate: widget.lastDate,
+                datePickerStyles: dp.DatePickerRangeStyles(
+                  defaultDateTextStyle: TextStyle(
+                    color: AppTheme.getTextColor(context),
+                  ),
+                  disabledDateStyle: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey[700]
+                        : Colors.grey[300],
+                  ),
+                  selectedPeriodStartTextStyle: const TextStyle(color: Colors.white),
+                  selectedPeriodMiddleTextStyle: const TextStyle(color: Colors.white),
+                  selectedPeriodEndTextStyle: const TextStyle(color: Colors.white),
+                  displayedPeriodTitle: TextStyle(
+                    color: AppTheme.getTextColor(context),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  // Remove defaultDateDecoration as it's not supported
+                  selectedPeriodStartDecoration: BoxDecoration(
+                    color: Colors.blue,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      bottomLeft: Radius.circular(16),
+                    ),
+                  ),
+                  selectedPeriodMiddleDecoration: BoxDecoration(
+                    color: Colors.blue,
+                  ),
+                  selectedPeriodLastDecoration: BoxDecoration(
+                    color: Colors.blue,
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                  ),
+                  selectedSingleDateDecoration: BoxDecoration(
+                    color: Colors.blue,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 16),
 

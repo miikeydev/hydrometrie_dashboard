@@ -232,7 +232,7 @@ class WaterPainter extends CustomPainter {
     Color lightColor;
     
     if (title.contains("Q")) { // Pour le débit (Q)
-      mainColor = AppTheme.debitMainColor; // Utilise les couleurs définies dans AppTheme
+      mainColor = const Color.fromARGB(255, 4, 128, 252); // Utilise les couleurs définies dans AppTheme
       lightColor = AppTheme.debitLightColor;
     } else { // Pour la hauteur (H)
       mainColor = AppTheme.hauteurMainColor;
