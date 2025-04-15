@@ -9,7 +9,7 @@ class HydroLineChart extends StatefulWidget {
   final List<double> values;
   final DateTime? startDate;
   final DateTime? endDate;
-  final bool isHeightChart; 
+  final bool isHeightChart;
 
   const HydroLineChart({
     Key? key,
@@ -18,7 +18,7 @@ class HydroLineChart extends StatefulWidget {
     required this.values,
     this.startDate,
     this.endDate,
-    this.isHeightChart = false, 
+    this.isHeightChart = false,
   }) : super(key: key);
 
   @override
@@ -51,8 +51,15 @@ class _HydroLineChartState extends State<HydroLineChart>
         widget.dates.length == widget.values.length;
 
     final Color mainColor = widget.isHeightChart
-        ? AppTheme.hauteurMainColor 
+        ? AppTheme.hauteurMainColor
         : AppTheme.debitMainColor;
+
+    final trend = hasData ? _calculateLinearRegression(widget.values) : {'slope': 0.0, 'intercept': 0.0};
+    final double slope = trend['slope']!;
+    final double intercept = trend['intercept']!;
+    final bool isTrendPositive = slope >= 0;
+    final Color trendColor = isTrendPositive ? Colors.green : Colors.red;
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -184,7 +191,6 @@ class _HydroLineChartState extends State<HydroLineChart>
                       minY: hasData ? _getMinY(widget.values) : 0,
                       maxY: hasData ? _getMaxY(widget.values) : 10,
                       lineBarsData: [
-                        // Ligne principale
                         LineChartBarData(
                           spots: hasData
                               ? List.generate(widget.dates.length, (index) {
@@ -214,7 +220,6 @@ class _HydroLineChartState extends State<HydroLineChart>
                             ),
                           ),
                         ),
-                        // Ligne de tendance
                         if (hasData)
                           _buildTrendLine(widget.values),
                       ],
@@ -223,40 +228,97 @@ class _HydroLineChartState extends State<HydroLineChart>
                         touchTooltipData: LineTouchTooltipData(
                           fitInsideHorizontally: true,
                           fitInsideVertically: true,
-                          getTooltipColor: (_) =>
-                              mainColor.withOpacity(0.8),
-                          getTooltipItems:
-                              (List<LineBarSpot> touchedSpots) {
-                            return touchedSpots.map((spot) {
-                              final int index = spot.x.toInt();
-                              if (hasData &&
-                                  index >= 0 &&
-                                  index < widget.dates.length) {
-                                final DateTime date =
-                                    widget.dates[index];
-                                final double value =
-                                    widget.values[index];
-                                return LineTooltipItem(
-                                  '${DateFormat('dd/MM HH:mm').format(date)}\n${_formatValueWithUnit(value, widget.isHeightChart)}',
-                                  const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                );
-                              } else {
-                                return const LineTooltipItem(
-                                    '', TextStyle());
-                              }
-                            }).toList();
+                          getTooltipColor: (touchedSpots) {
+                            return isDarkMode
+                                ? Colors.grey[800]!.withOpacity(0.9)
+                                : Colors.white.withOpacity(0.9);
+                          },
+                          getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                            if (touchedSpots.isEmpty) {
+                              return [];
+                            }
+
+                            final int index = touchedSpots.first.x.toInt();
+
+                            if (index >= 0 && index < widget.dates.length) {
+                              final DateTime date = widget.dates[index];
+                              final double actualValue = widget.values[index];
+                              final double trendValue = slope * index + intercept;
+
+                              final LineTooltipItem actualValueItem = LineTooltipItem(
+                                '${DateFormat('dd/MM HH:mm').format(date)}\n'
+                                '${_formatValueWithUnit(actualValue, widget.isHeightChart)}',
+                                TextStyle(
+                                  color: isDarkMode ? Colors.white : Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              );
+
+                              final LineTooltipItem trendValueItem = LineTooltipItem(
+                                'Tendance: ${_formatValueWithUnit(trendValue, widget.isHeightChart)} '
+                                '(${isTrendPositive ? '▲' : '▼'})',
+                                TextStyle(
+                                  color: trendColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              );
+
+                              return [actualValueItem, trendValueItem];
+                            } else {
+                              return [];
+                            }
                           },
                         ),
+                        getTouchedSpotIndicator: (barData, spotIndexes) {
+                          return spotIndexes.map((index) {
+                            final List<LineChartBarData> allBars = [
+                              LineChartBarData(
+                                spots: hasData
+                                    ? List.generate(widget.dates.length, (index) {
+                                        return FlSpot(index.toDouble(), widget.values[index]);
+                                      })
+                                    : [const FlSpot(0, 0), const FlSpot(1, 1)],
+                                color: mainColor,
+                              ),
+                              if (hasData) _buildTrendLine(widget.values),
+                            ];
+                            
+                            final currentBar = allBars.firstWhere((bar) => bar == barData, orElse: () => allBars[0]);
+                            final isMainLine = currentBar == allBars[0];
+                            
+                            return TouchedSpotIndicatorData(
+                              FlLine(
+                                color: isMainLine 
+                                    ? mainColor 
+                                    : currentBar.color ?? Colors.transparent,
+                                strokeWidth: 2,
+                                dashArray: isMainLine ? null : [5, 5],
+                              ),
+                              FlDotData(
+                                getDotPainter: (spot, percent, barData, index) {
+                                  return FlDotCirclePainter(
+                                    radius: isMainLine ? 5 : 4,
+                                    color: isMainLine 
+                                        ? mainColor 
+                                        : barData.color ?? Colors.transparent,
+                                    strokeWidth: 2,
+                                    strokeColor: isDarkMode ? Colors.black : Colors.white,
+                                  );
+                                },
+                              ),
+                            );
+                          }).toList();
+                        },
+                        touchCallback: (FlTouchEvent event, LineTouchResponse? touchResponse) {
+                        },
                         handleBuiltInTouches: true,
                       ),
                     ),
                   )
                 : Center(
                     child: Text(
-                      "En attente des données...", 
+                      "En attente des données...",
                       style: TextStyle(
                         color: Theme.of(context).brightness == Brightness.dark
                             ? Colors.grey[400]
@@ -273,20 +335,17 @@ class _HydroLineChartState extends State<HydroLineChart>
   }
 
   LineChartBarData _buildTrendLine(List<double> values) {
-    // Calculer la régression linéaire
     final trend = _calculateLinearRegression(values);
     final double slope = trend['slope']!;
     final double intercept = trend['intercept']!;
 
-    // Générer les points pour la ligne de tendance
     final List<FlSpot> trendSpots = List.generate(values.length, (index) {
       final double y = slope * index + intercept;
       return FlSpot(index.toDouble(), y);
     });
 
-    // Déterminer la couleur de la ligne (rouge pour pente négative, vert pour pente positive)
     final Color trendColor = slope >= 0
-        ? Colors.green.withOpacity(0.6) 
+        ? Colors.green.withOpacity(0.6)
         : Colors.red.withOpacity(0.6);
 
     return LineChartBarData(
@@ -296,11 +355,12 @@ class _HydroLineChartState extends State<HydroLineChart>
       barWidth: 2,
       isStrokeCapRound: true,
       dotData: const FlDotData(show: false),
-      dashArray: [5, 5], // Ligne pointillée
+      dashArray: [5, 5],
     );
   }
 
   Map<String, double> _calculateLinearRegression(List<double> values) {
+    if (values.length < 2) return {'slope': 0.0, 'intercept': values.isNotEmpty ? values.first : 0.0};
     final int n = values.length;
     final List<double> x = List.generate(n, (index) => index.toDouble());
     final double sumX = x.reduce((a, b) => a + b);
@@ -309,7 +369,10 @@ class _HydroLineChartState extends State<HydroLineChart>
         .reduce((a, b) => a + b);
     final double sumX2 = x.map((xi) => xi * xi).reduce((a, b) => a + b);
 
-    final double slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    final denominator = (n * sumX2 - sumX * sumX);
+    if (denominator == 0) return {'slope': 0.0, 'intercept': sumY / n};
+
+    final double slope = (n * sumXY - sumX * sumY) / denominator;
     final double intercept = (sumY - slope * sumX) / n;
 
     return {'slope': slope, 'intercept': intercept};
@@ -318,36 +381,25 @@ class _HydroLineChartState extends State<HydroLineChart>
   double _getMinY(List<double> values) {
     if (values.isEmpty) return 0;
     double min = values.reduce((a, b) => a < b ? a : b);
+    final trend = _calculateLinearRegression(values);
+    final trendMin = trend['intercept']!;
+    final trendMax = trend['slope']! * (values.length - 1) + trend['intercept']!;
+    min = [min, trendMin, trendMax].reduce((a, b) => a < b ? a : b);
     return min > 0 ? min * 0.9 : min * 1.1;
   }
 
   double _getMaxY(List<double> values) {
     if (values.isEmpty) return 10;
     double max = values.reduce((a, b) => a > b ? a : b);
+    final trend = _calculateLinearRegression(values);
+    final trendMin = trend['intercept']!;
+    final trendMax = trend['slope']! * (values.length - 1) + trend['intercept']!;
+    max = [max, trendMin, trendMax].reduce((a, b) => a > b ? a : b);
     return max > 0 ? max * 1.1 : max * 0.9;
   }
 
-  double _calculateInterval(List<double> values) {
-    if (values.isEmpty) return 1.0;
-    double min = values.reduce((a, b) => a < b ? a : b);
-    double max = values.reduce((a, b) => a > b ? a : b);
-    double range = max - min;
-
-    if (range <= 0) return 1.0;
-    return range / 5;
-  }
-
-  double _calculateStep(List<double> values, int maxSteps) {
-    if (values.isEmpty) return 1.0;
-    double min = values.reduce((a, b) => a < b ? a : b);
-    double max = values.reduce((a, b) => a > b ? a : b);
-    double range = max - min;
-
-    if (range <= 0) return 1.0;
-    return (range / maxSteps).ceilToDouble();
-  }
-
   String _formatValue(double value) {
+    if (value.isNaN || value.isInfinite) return "N/A";
     if (value >= 1000000) {
       return '${(value / 1000000).toStringAsFixed((value % 1000000 == 0) ? 0 : 1)}M';
     } else if (value >= 1000) {
@@ -361,14 +413,8 @@ class _HydroLineChartState extends State<HydroLineChart>
 
   String _formatValueWithUnit(double value, bool isHeight) {
     String formattedValue = _formatValue(value);
+    if (formattedValue == "N/A") return "N/A";
     String unit = isHeight ? 'm' : 'm³/s';
     return '$formattedValue $unit';
-  }
-
-  String _getNoDataText() {
-    final now = DateTime.now().second;
-    if (now % 3 == 0) return "-";
-    if (now % 3 == 1) return "- -";
-    return "- - -";
   }
 }
