@@ -39,8 +39,8 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
   late Key _calendarKey;
 
   late DateTime _today;
-  late final DateTime _min;
-  late final DateTime _max;
+  late DateTime _min;
+  late DateTime _max;
 
   /// Variable pour stocker la clé de suggestion précédente
   String _lastSuggestionsKey = '';
@@ -49,7 +49,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
   void initState() {
     super.initState();
     _today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    _min = _today.subtract(const Duration(days: 30));
+    _min = _today.subtract(const Duration(days: 29)); // 30 jours glissants
     _max = _today;
     final defaultStart = _today.subtract(const Duration(days: 6));
     final defaultEnd = _today;
@@ -94,6 +94,8 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
       
       // Réinitialiser à la date actuelle pour assurer le bon affichage du mois courant
       _today = DateTime.now();
+      _min = _today.subtract(const Duration(days: 30)); // 30 jours glissants
+      _max = _today;
       final defaultStart = _today.subtract(const Duration(days: 6));
       final defaultEnd = _today;
       
@@ -114,14 +116,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
     // Après avoir réinitialisé, remettre le focus sur la barre de recherche
     _searchFocusNode.requestFocus();
   }
-
-  void _onPeriodChanged(dp.DatePeriod newPeriod) {
-    final start = newPeriod.start.isBefore(_min) ? _min : newPeriod.start;
-    final end = newPeriod.end.isAfter(_max) ? _max : newPeriod.end;
-    setState(() => _currentPeriod = dp.DatePeriod(start, end));
-    ref.read(dateRangeProvider.notifier).state = DateTimeRange(start: start, end: end);
-  }
-
+  
   void _onStationSelected(Map<String, dynamic> selection) async {
     String stationName = selection['libelle_station'] ?? '';
     if (stationName.isEmpty) {
@@ -494,7 +489,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                     : const Color(0xFF2196F3), // Bleu pour thème clair
                 
                 // Couleur mise en évidence aujourd'hui
-                todayHighlightColor: const Color(0xFF1976D2),
+                todayHighlightColor: Colors.transparent,
                 
                 // Couleur de fond du calendrier en fonction du thème
                 backgroundColor: AppTheme.getContainerBackgroundColor(context),
@@ -511,7 +506,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                       fontSize: 13,
                     ),
                   ),
-                  showTrailingAndLeadingDates: true,
+                  showTrailingAndLeadingDates: false, // N'affiche que les jours du mois courant
                   dayFormat: 'EE', // Format court pour les jours de la semaine
                 ),
                 
@@ -537,10 +532,8 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                         ? Colors.white70
                         : Colors.grey[700],
                   ),
-                  todayTextStyle: TextStyle(
-                    color: const Color(0xFF1976D2),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                  todayTextStyle: const TextStyle(
+                    color: Color(0xFF1976D2), // Bleu, sans gras ni taille spéciale
                   ),
                   leadingDatesTextStyle: TextStyle(
                     color: Theme.of(context).brightness == Brightness.dark
