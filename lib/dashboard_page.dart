@@ -8,11 +8,28 @@ import 'dart:developer' as developer;
 import 'water_level_widget.dart';
 import 'theme.dart';
 
-class DashboardPage extends ConsumerWidget {
+class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends ConsumerState<DashboardPage> {
+  late final DateTime _today;
+  late final DateTime _first;
+  late final DateTime _last;
+
+  @override
+  void initState() {
+    super.initState();
+    _today = DateTime.now();
+    _first = _today.subtract(const Duration(days: 30));
+    _last = _today.add(const Duration(days: 30));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final observationsAsync = ref.watch(observationsProvider);
     final selectedStation = ref.watch(selectedStationProvider);
     final dateRange = ref.watch(dateRangeProvider);
@@ -168,12 +185,12 @@ class DashboardPage extends ConsumerWidget {
 
                     child: StationInfoPanel(
                       initialDateRange: DateTimeRange(
-                        start: DateTime.now().subtract(const Duration(days: 5)),
-                        end: DateTime.now(),
+                        start: _today.subtract(const Duration(days: 5)),
+                        end: _today,
                       ),
-                      firstDate: DateTime.now().subtract(const Duration(days: 30)), // Limite un mois en arrière
-                      lastDate: DateTime.now().add(const Duration(days: 30)), // Limite un mois en avant
-                      maxSelectableDate: DateTime.now(), // Empêche la sélection au-delà de la date actuelle
+                      firstDate: _first, // Limite un mois en arrière
+                      lastDate: _last, // Limite un mois en avant
+                      maxSelectableDate: _today, // Empêche la sélection au-delà de la date actuelle
                     ),
                   ),
 

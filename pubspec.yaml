@@ -18,6 +18,7 @@ dependencies:
   percent_indicator: ^4.2.4
   positioned_tap_detector_2: ^1.0.4
   fl_chart: ^0.70.2
+  syncfusion_flutter_datepicker: ^29.1.38
 
 dev_dependencies:
   flutter_test:

@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart' as latlong2;
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'theme.dart';
+import 'package:syncfusion_flutter_datepicker/datepicker.dart';
 
 class StationInfoPanel extends ConsumerStatefulWidget {
   final String initialSearchText;
@@ -35,6 +36,11 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
   final MapController _mapController = MapController();
   late dp.DatePeriod _currentPeriod;
   Timer? _searchDebounce;
+  late Key _calendarKey;
+
+  late DateTime _today;
+  late final DateTime _min;
+  late final DateTime _max;
 
   /// Variable pour stocker la clé de suggestion précédente
   String _lastSuggestionsKey = '';
@@ -42,11 +48,13 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
   @override
   void initState() {
     super.initState();
-    final today = DateTime.now();
-    final validStartDate = today.isBefore(widget.firstDate) ? widget.firstDate : today;
-    final validEndDate = today.isAfter(widget.lastDate) ? widget.lastDate : today;
-
-    _currentPeriod = dp.DatePeriod(validStartDate, validEndDate);
+    _today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    _min = _today.subtract(const Duration(days: 30));
+    _max = _today;
+    final defaultStart = _today.subtract(const Duration(days: 6));
+    final defaultEnd = _today;
+    _currentPeriod = dp.DatePeriod(defaultStart, defaultEnd);
+    _calendarKey = ValueKey('${defaultStart.toIso8601String()}_${defaultEnd.toIso8601String()}');
     _searchController.text = widget.initialSearchText;
 
     // Listener avec debounce pour effectuer une requête API
@@ -60,8 +68,8 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
 
     Future.microtask(() {
       ref.read(dateRangeProvider.notifier).state = DateTimeRange(
-        start: validStartDate,
-        end: validEndDate,
+        start: defaultStart,
+        end: defaultEnd,
       );
       ref.read(searchTextProvider.notifier).state = widget.initialSearchText;
 
@@ -81,41 +89,37 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
   void _resetFilters() {
     FocusScope.of(context).unfocus();
     setState(() {
-      final today = DateTime.now();
-      final validStartDate = today.isBefore(widget.firstDate) ? widget.firstDate : today;
-      final validEndDate = today.isAfter(widget.lastDate) ? widget.lastDate : today;
-
       _searchController.clear();
       ref.read(searchTextProvider.notifier).state = '';
+      
+      // Réinitialiser à la date actuelle pour assurer le bon affichage du mois courant
+      _today = DateTime.now();
+      final defaultStart = _today.subtract(const Duration(days: 6));
+      final defaultEnd = _today;
+      
       ref.read(dateRangeProvider.notifier).state = DateTimeRange(
-        start: validStartDate,
-        end: validEndDate,
+        start: defaultStart,
+        end: defaultEnd,
       );
       ref.read(selectedStationProvider.notifier).state = null;
-      _currentPeriod = dp.DatePeriod(validStartDate, validEndDate);
-
+      _currentPeriod = dp.DatePeriod(defaultStart, defaultEnd);
+      
+      // Forcer la régénération du calendrier avec une nouvelle clé pour s'assurer qu'il s'affiche correctement
+      _calendarKey = ValueKey('reset_${DateTime.now().millisecondsSinceEpoch}');
+      
+      // Recentrer la carte sur la France
       _animatedMapMove(latlong2.LatLng(47.0, 2.0), 6.0);
     });
+    
+    // Après avoir réinitialisé, remettre le focus sur la barre de recherche
     _searchFocusNode.requestFocus();
   }
 
   void _onPeriodChanged(dp.DatePeriod newPeriod) {
-    final adjustedStart = newPeriod.start.isAfter(widget.maxSelectableDate)
-        ? widget.maxSelectableDate
-        : newPeriod.start;
-    final adjustedEnd = newPeriod.end.isAfter(widget.maxSelectableDate)
-        ? widget.maxSelectableDate
-        : newPeriod.end;
-
-    final validStart = adjustedStart.isAfter(adjustedEnd) ? adjustedEnd : adjustedStart;
-
-    setState(() {
-      _currentPeriod = dp.DatePeriod(validStart, adjustedEnd);
-    });
-    ref.read(dateRangeProvider.notifier).state = DateTimeRange(
-      start: validStart,
-      end: adjustedEnd,
-    );
+    final start = newPeriod.start.isBefore(_min) ? _min : newPeriod.start;
+    final end = newPeriod.end.isAfter(_max) ? _max : newPeriod.end;
+    setState(() => _currentPeriod = dp.DatePeriod(start, end));
+    ref.read(dateRangeProvider.notifier).state = DateTimeRange(start: start, end: end);
   }
 
   void _onStationSelected(Map<String, dynamic> selection) async {
@@ -417,7 +421,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
           ),
           const SizedBox(height: 16),
           
-          // Date range picker - taille fixe
+          // Date range picker - moderne (Syncfusion)
           Text(
             "Plage de dates",
             style: TextStyle(
@@ -430,71 +434,131 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
           ),
           const SizedBox(height: 8),
           Container(
-            height: 250, // Hauteur fixe pour le calendrier
-            width: double.infinity, // Prend toute la largeur disponible
+            height: 300, // double de la taille précédente
+            width: double.infinity,
             decoration: BoxDecoration(
               color: AppTheme.getContainerBackgroundColor(context),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
                   color: Theme.of(context).shadowColor,
-                  blurRadius: 2,
-                )
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
-            padding: const EdgeInsets.all(2),
-  child: ClipRRect(
-    borderRadius: BorderRadius.circular(8),
-    child: dp.RangePicker(
-      key: ValueKey(_currentPeriod.start), // *** Ajout de la ValueKey
-      selectedPeriod: _currentPeriod,
-      onChanged: _onPeriodChanged,
-      firstDate: widget.firstDate,
-      lastDate: widget.lastDate,
-      datePickerStyles: dp.DatePickerRangeStyles(
-        defaultDateTextStyle: TextStyle(
-          color: AppTheme.getTextColor(context),
-        ),
-        disabledDateStyle: TextStyle(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.grey[700]
-              : Colors.grey[300],
-        ),
-        selectedPeriodStartTextStyle: const TextStyle(color: Colors.white),
-        selectedPeriodMiddleTextStyle: const TextStyle(color: Colors.white),
-        selectedPeriodEndTextStyle: const TextStyle(color: Colors.white),
-        displayedPeriodTitle: TextStyle(
-          color: AppTheme.getTextColor(context),
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
-        // Remove defaultDateDecoration as it's not supported
-        selectedPeriodStartDecoration: BoxDecoration(
-          color: Colors.blue,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(16),
-            bottomLeft: Radius.circular(16),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SfDateRangePicker(
+                key: _calendarKey,
+                selectionMode: DateRangePickerSelectionMode.range,
+                initialSelectedRange: PickerDateRange(_currentPeriod.start, _currentPeriod.end),
+                minDate: _min,
+                maxDate: _max,
+                onSelectionChanged: (DateRangePickerSelectionChangedArgs args) {
+                  if (args.value is PickerDateRange) {
+                    final range = args.value as PickerDateRange;
+                    final start = range.startDate ?? _min;
+                    final end = range.endDate ?? start;
+                    setState(() {
+                      _currentPeriod = dp.DatePeriod(start, end);
+                      // Ne pas changer la clé ici !
+                    });
+                    ref.read(dateRangeProvider.notifier).state = DateTimeRange(start: start, end: end);
+                  }
+                },
+                onViewChanged: (DateRangePickerViewChangedArgs args) {
+                  // Ne rien faire ici pour permettre la navigation libre
+                },
+                enablePastDates: true,
+                showActionButtons: false,
+                view: DateRangePickerView.month,
+                
+                // Personnalisation des couleurs en fonction du thème
+                selectionColor: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF1976D2) // Bleu foncé pour thème sombre
+                    : const Color(0xFF2196F3), // Bleu pour thème clair
+                
+                // Couleur de l'intervalle
+                rangeSelectionColor: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF1976D2).withOpacity(0.3) // Bleu foncé avec transparence pour thème sombre
+                    : const Color(0xFF2196F3).withOpacity(0.15), // Bleu avec transparence pour thème clair
+                
+                // Couleurs du début et fin de l'intervalle
+                startRangeSelectionColor: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF1976D2) // Bleu foncé pour thème sombre
+                    : const Color(0xFF2196F3), // Bleu pour thème clair
+                
+                endRangeSelectionColor: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF1976D2) // Bleu foncé pour thème sombre
+                    : const Color(0xFF2196F3), // Bleu pour thème clair
+                
+                // Couleur mise en évidence aujourd'hui
+                todayHighlightColor: const Color(0xFF1976D2),
+                
+                // Couleur de fond du calendrier en fonction du thème
+                backgroundColor: AppTheme.getContainerBackgroundColor(context),
+                
+                // Style des jours et des mois
+                monthViewSettings: DateRangePickerMonthViewSettings(
+                  firstDayOfWeek: 1, // Premier jour = lundi
+                  viewHeaderHeight: 35,
+                  viewHeaderStyle: DateRangePickerViewHeaderStyle(
+                    textStyle: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white70
+                          : Colors.grey[700],
+                      fontSize: 13,
+                    ),
+                  ),
+                  showTrailingAndLeadingDates: true,
+                  dayFormat: 'EE', // Format court pour les jours de la semaine
+                ),
+                
+                // Style de l'en-tête du calendrier
+                headerStyle: DateRangePickerHeaderStyle(
+                  textAlign: TextAlign.center,
+                  textStyle: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.grey[800],
+                  ),
+                  backgroundColor: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF2C2C2C) // Gris foncé pour thème sombre
+                      : Colors.grey[100], // Gris clair pour thème clair
+                ),
+                
+                // Style des dates
+                monthCellStyle: DateRangePickerMonthCellStyle(
+                  textStyle: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white70
+                        : Colors.grey[700],
+                  ),
+                  todayTextStyle: TextStyle(
+                    color: const Color(0xFF1976D2),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                  leadingDatesTextStyle: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white30
+                        : Colors.grey[400],
+                    fontSize: 12,
+                  ),
+                  trailingDatesTextStyle: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white30
+                        : Colors.grey[400],
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-        selectedPeriodMiddleDecoration: BoxDecoration(
-          color: Colors.blue,
-        ),
-        selectedPeriodLastDecoration: BoxDecoration(
-          color: Colors.blue,
-          borderRadius: const BorderRadius.only(
-            topRight: Radius.circular(16),
-            bottomRight: Radius.circular(16),
-          ),
-        ),
-        selectedSingleDateDecoration: BoxDecoration(
-          color: Colors.blue,
-          shape: BoxShape.circle,
-        ),
-      ),
-    ),
-  ),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
           // Map - s'agrandit automatiquement
           Text(
@@ -510,6 +574,7 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
           const SizedBox(height: 8),
           Expanded(
             child: Container(
+              // Agrandit la map (moins de padding vertical)
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
