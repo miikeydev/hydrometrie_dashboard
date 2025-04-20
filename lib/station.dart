@@ -494,6 +494,10 @@ class _StationInfoPanelState extends ConsumerState<StationInfoPanel> with Ticker
                 // Couleur de fond du calendrier en fonction du thème
                 backgroundColor: AppTheme.getContainerBackgroundColor(context),
                 
+                // Ajout : forme de sélection carrée avec coins arrondis
+                selectionShape: DateRangePickerSelectionShape.rectangle,
+                selectionRadius: 8,
+                
                 // Style des jours et des mois
                 monthViewSettings: DateRangePickerMonthViewSettings(
                   firstDayOfWeek: 1, // Premier jour = lundi
