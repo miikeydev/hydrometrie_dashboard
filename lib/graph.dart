@@ -414,7 +414,7 @@ class _HydroLineChartState extends State<HydroLineChart>
   String _formatValueWithUnit(double value, bool isHeight) {
     String formattedValue = _formatValue(value);
     if (formattedValue == "N/A") return "N/A";
-    String unit = isHeight ? 'm' : 'm³/s';
+    String unit = isHeight ? 'mm' : 'm³/s';
     return '$formattedValue $unit';
   }
 }

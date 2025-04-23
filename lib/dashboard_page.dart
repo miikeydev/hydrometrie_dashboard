@@ -101,8 +101,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           final minHauteurValue = yValuesHauteur.reduce((a, b) => a < b ? a : b);
           final maxHauteurValue = yValuesHauteur.reduce((a, b) => a > b ? a : b);
 
-          minHauteur = formatValue(minHauteurValue, 'm');
-          maxHauteur = formatValue(maxHauteurValue, 'm');
+          minHauteur = formatValue(minHauteurValue, 'mm');
+          maxHauteur = formatValue(maxHauteurValue, 'mm');
         }
       }
     }
@@ -361,7 +361,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                               })()
                                             : 0.1, // 10% pour les cas sans données
                                         size: double.infinity,
-                                        formattedValue: hauteurMoyenne != 0 ? formatValue(hauteurMoyenne, 'm') : 'N/A',
+                                        formattedValue: hauteurMoyenne != 0 ? formatValue(hauteurMoyenne, 'mm') : 'N/A',
                                         percentage: (hauteurMoyenne != 0 && _isValidDouble(minHauteur) && _isValidDouble(maxHauteur))
                                             ? (() {
                                                 try {

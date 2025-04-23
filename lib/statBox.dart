@@ -16,7 +16,7 @@ class StatBox extends StatelessWidget {
     // Séparation de la valeur et de l'unité pour un meilleur affichage
     final parts = value.split(' ');
     final numericValue = parts.isNotEmpty ? parts.first : "N/A";
-    final unit = parts.length > 1 ? parts.last : "";
+    final unit = parts.length > 1 ? (parts.last == "m" ? "mm" : parts.last) : "";
     
     return Container(
       padding: const EdgeInsets.all(16),

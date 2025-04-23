@@ -179,6 +179,8 @@ class KPISummary extends StatelessWidget {
       formattedValue = value.toStringAsFixed(2);
     }
     
+    // Remplacement de l'unité m par mm
+    if (unit == "m") unit = "mm";
     return '$formattedValue $unit';
   }
 }
